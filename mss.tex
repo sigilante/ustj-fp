@@ -1,6 +1,10 @@
 \documentclass[twoside]{article}
 
+\usepackage{amsfonts}
+\usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{listings}
+\usepackage{natbib}
 
 %% Configure first-page footer and later-page header.
 \usepackage{fancyhdr}
@@ -13,7 +17,7 @@
 \fancyfoot[L]{{\footnotesize
               Manuscript submitted for review.\\
               ~ \\
-              Address author correspondence to \texttt{~lagrev-nocfep}.
+              Address author correspondence to \texttt{\textasciitilde lagrev-nocfep}.
               }}
 }
 %  Arrange subsequent pages:
@@ -24,17 +28,18 @@
 
 %%MANUSCRIPT
 \title{Floating-Point Arithmetic on Deterministic Systems}
-\author{Neal E. Davis \texttt{\textasciitilde lagrev-nocfep}
+\author{Neal E. Davis \texttt{\textasciitilde lagrev-nocfep}}
 
 \begin{document}
 
-\frontmatter
 \maketitle
 \thispagestyle{firststyle}
 
 \begin{abstract}
 Floating-point calculations are critical to a number of special domains in modern computing, including machine learning, graphics, and scientific computing.  Numerical calculations are particularly subject to opaque and system-local optimizations, which can break certain guarantees for deterministic computers.  We consider the background and implementation of IEEE 754 floating-point arithmetic and options for implementing it compatibly with fully reproducible computing.  We examine hardware-based and software-based proposals.
 \end{abstract}
+
+\section{Introduction}
 
 \begin{quote}
 Floating-point operations are a technically complex subject and the extent to which developers or source code alter or test this information will depend on many factors. Apart from the general exhortation to developers to be careful and to make sure they know what they are doing, there is little of practical use that can be recommended.  \citep[p.~197]{Jones2008}
@@ -48,14 +53,11 @@ Early numeric computing tended to focus on problems of interest to military and 
 
 Binary computer values are at root easily represented as nonnegative integers.  However, it is frequently convenient when working with human applications to either use other numeric bases (notably decimal and hexadecimal) or to permit non-integer mathematics.
 
-In the historical development of mathematics, logical problems in each set of numbers drove the \{discovery, invention} of more elaborate algebras.  For instance, in the field of natural numbers $\mathbb{N}$, the operation of addition $+$ or multiplication $\times$ produces a value within the set; however, permitting subtraction $-$ of a larger number from a smaller number can result in a value inexpressible in $\mathbb{N}$.  This motivated the introduction of the integers $\mathbb{Z}$, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division $/$ similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean\footnote{A legendary attribution, alas, predicated on the Pythagorean discovery of the irrational numbers as a separate class thereby inducing a crisis.  https://plato.stanford.edu/entries/pythagoras/} innovation of the rational numbers or fractions as a class $\mathbb{Q}$.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the real numbers $\mathbb{R}$.  The real numbers $\mathbb{R}$ are continuous, meaning (among other things) that any pair of values has a difference, however small.  
+In the historical development of mathematics, logical problems in each set of numbers drove the \{discovery, invention\} of more elaborate algebras.  For instance, in the field of natural numbers $\mathbb{N}$, the operation of addition $+$ or multiplication $\times$ produces a value within the set; however, permitting subtraction $-$ of a larger number from a smaller number can result in a value inexpressible in $\mathbb{N}$.  This motivated the introduction of the integers $\mathbb{Z}$, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division $/$ similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean\footnote{A legendary attribution, alas, predicated on the Pythagorean discovery of the irrational numbers as a separate class thereby inducing a crisis.  https://plato.stanford.edu/entries/pythagoras/} innovation of the rational numbers or fractions as a class $\mathbb{Q}$.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the real numbers $\mathbb{R}$.  The real numbers $\mathbb{R}$ are continuous, meaning (among other things) that any pair of values has a difference, however small.  
 
 Since the operations and conventions of $\mathbb{R}$ have been found to be so useful, it is desirable to extend the semantics to computer programming.  However, digital computers, by virtue of their binary representation, effectively use natural numbers $\mathbb{N}$ to represent numbers (to the limit of memory rather than positive infinity $+\infty$).  Several schemes have been proposed to mitigate this situation by permitting a computer integer to be interpreted as if it were a number with a fractional part, including a scaling factor, fixed-point representation,\footnote{Hand-in-hand with the development of linear algebra, machines such as ENIAC and MANIAC were employed in the 1940s for solving arrays of thermonuclear reaction calculations and neutron diffusion equations.  Under the direction of John von Neumann, it appears that some calculations did experimentally involve a floating-point scheme, although this was later rejected definitively in favor of fixed-point arithmetic.  \citep[p.~3]{Kahan1997a}} and floating-point representations.
-% https://people.eecs.berkeley.edu/~wkahan/SIAMjvnl.pdf
 
 The basic concept of floating point arithmetic is that it permits the representation of a discrete subset of $\mathbb{R}$ by composing a significand, a base, and an exponent.  The significand is the set of significant digits, possibly including the sign; the base is the understood number base (typically 2); and the exponent is the power to which that base is put before multiplying by the significand to yield the result.\footnote{Compare so-called “engineering” notation, such as \texttt{1e5} for 10,000, which compactly represents the significand 1 and the exponent 5 with an understood base of 10 indicated by \texttt{e} and a sign, implicit for positive.}  The most ubiquitous floating-point format in use today is defined by the IEEE 754 standard, but certain hardware platforms such as GPGPUs utilize alternative floating-point arithmetic representations.\footnote{We cite bfloat16 \citep{Wang2019} and TensorFloat-32 \citep{Kharva2020}, among others.}
-% Wang2019 https://cloud.google.com/blog/products/ai-machine-learning/bfloat16-the-secret-to-high-performance-on-cloud-tpus
-% Kharva2020 https://blogs.nvidia.com/blog/tensorfloat-32-precision-format/
 
 To summarize, given an abstract description of a floating point system, there are several practical implementations that can be derived.  We need to specify at least four quantities:
 
@@ -66,6 +68,7 @@ To summarize, given an abstract description of a floating point system, there ar
   \item  Exponent
 \end{enumerate}
 
+\noindent
 The base is presumably fixed by the protocol, leaving three free values for the implementation to encode.
 
 
@@ -80,10 +83,10 @@ SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
 where \texttt{S} is the sign bit, \texttt{0} for $+$ and \texttt{1} for $-$; \texttt{E} is the exponent in base-2 (8 bits); and \texttt{F} is the significand (23 bits).  The exponent is actually calculated at an offset bias of 127 ($2^{7}$) so that a more expressive range of orders of magnitude can be covered.  The significand has an implied leading \texttt{1} bit unless all are zero.  To wit,
 
 $$
-(-1)^{\texttt{S}} \times 2^(\texttt{E}-127) \times 1.\texttt{F}
+(-1)^{\texttt{S}} \times 2^{\texttt{E}-127} \times 1.\texttt{F}
 $$
 
-IEEE 754 specifies operations between numbers, including of different magnitudes.  The standard dictates behavior and provides outlines for arithmetic, but not leaves algorithmic details to the implementation.  Numbers are normalized by adjusting the exponent of the smaller operand and aligning the significands, then the operations are carried out.  In practice, extended precision values are used in the intermediate steps of many algorithms, leading to greater accuracy than would otherwise be expected.\footnote{“Each of the computational operations that return a numeric result specified by this standard shall be performed as if it first produced an intermediate result correct to infinite precision and with unbounded range, and then rounded that intermediate result, if necessary, to fit in the destination’s format.”  \citep{IEEE754-2008}  Note that, per \citeauthor{Risse2016}, “there is no indication whether or not a computation with IEEE 754 is exact even if all arguments are.”  The ISO/IEC9899 C standard confesses its own fallibility:  “The floating-point model is intended to clarify the description of each floating-point characteristic and does not require the floating-point arithmetic of the implementation to be identical” \citep[fn.~21]{IEC9899}.}
+IEEE 754 specifies operations between numbers, including of different magnitudes.  The standard dictates behavior and provides outlines for arithmetic, but not leaves algorithmic details to the implementation.  Numbers are normalized by adjusting the exponent of the smaller operand and aligning the significands, then the operations are carried out.  In practice, extended precision values are used in the intermediate steps of many algorithms, leading to greater accuracy than would otherwise be expected.\footnote{“Each of the computational operations that return a numeric result specified by this standard shall be performed as if it first produced an intermediate result correct to infinite precision and with unbounded range, and then rounded that intermediate result, if necessary, to fit in the destination’s format.”  \citep{IEEE754-2008}  Note that, per \citeauthor{Risse2016}, “there is no indication whether or not a computation with IEEE 754 is exact even if all arguments are.”  The ISO/IEC9899 C standard confesses its own fallibility:  “The floating-point model is intended to clarify the description of each floating-point characteristic and does not require the floating-point arithmetic of the implementation to be identical” \citep[fn.~21]{ISO9899}.}
 % https://www.iso.org/obp/ui/#iso:std:iso-iec:9899:ed-4:v1:en
 
 Since the IEEE 754 floating-point format packs values of different kind together bitwise, conventional integer operations such as \texttt{<<} left shift and \texttt{+} addition do not trivially apply.\footnote{For instance, left-shifting \texttt{1.0} does not result in \texttt{2.0} but \texttt{1.7014118e38}; we leave the mathematics of why as an exercise to the reader.}
@@ -117,11 +120,10 @@ For most values of the exponent $\texttt{E}$, the difference between two discret
 \label{fig:fp-res}
 \end{figure}
 
-However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the {\emph relative shift} in exponent $\Delta\texttt{E}$.  For \texttt{E} = 2, for instance, the difference between serial values is $2^{-21}$.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
+However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the {\emph relative shift} in exponent $\Delta\texttt{E}$.  For $\texttt{E} = 2$, for instance, the difference between serial values is $2^{-21}$.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
 % https://www.h-schmidt.net/FloatConverter/IEEE754.html
 
 Truncation error results from terminating repeating “binaries” (by analogy with “decimals”).  Just as $\frac{1}{3} = 0.\bar{3} \approx 0.3333…$ has a finite precision when written in base-10, numbers that are not precise powers of two result in repeating fractions.  These necessarily terminate at the resolution of the significand.  The number and nature of truncation and rounding can significantly affect the accuracy of floating-point arithmetic and algorithms \citep{Izquierdo2006}.
-% Izquierdo2006 https://www.jasss.org/9/4/4.html
  
 \paragraph{Machine epsilon}.
 
@@ -131,7 +133,8 @@ The machine epsilon, or smallest value discernable from 1.0, is determined by th
 
 In situations in which floating-point operations may occur in different orders, even the basic guarantee of communitativity breaks.  For instance, in 64-bit FP arithmetic, the following holds true (example in Python):
 
-\begin[python]{/lstlisting}
+\lstset{language=Python}
+\begin{lstlisting}
 In [1]: (1.1-0.3)-0.8
 Out[1]: 0.0
 
@@ -142,8 +145,6 @@ Out[2]: 5.551115123125783e-17
 This occurs since operations of different magnitude can affect the resulting significand, a sort of horizon of resolution leading to differences in the outcome.  Sequence order can be changed (and thus commutativity broken) as a result of many common programmer design patterns, including compiler optimizations, race conditions, and parallelization.
 
 Another problem in numerical analysis, error accrual is likewise due to the horizon of resolution.  The accrual of error due to summing sequences of numbers (whether in parallel or serially) occurs in the summation of sequences of numbers since the error term can grow as $n$.  Kahan–Babuška compensated summation can be used to track a separate error term ({\emph de facto} extending the precision during the operations) and adding it back in to the sum before yielding the final result \citep{Kahan1965,Babuska1969}.
-%  Kahan, William (January 1965), "Further remarks on reducing truncation errors" (PDF), Communications of the ACM, 8 (1): 40, doi:10.1145/363707.363723, S2CID 22584810, archived from the original (PDF) on 9 February 2018.
-% Babuska, I.: Numerical stability in mathematical analysis. Inf. Proc. ˇ 68, 11–23 (1969)
 
 Formally neither associative nor commutative for the above reasons, floating-point arithmetic can break our mathematical intuitions in interesting ways.  However, this is a consistent and well-understood phenomenon.  For our purposes as designers of deterministic computers, the most damning indictment has to do not with IEEE 754 itself but with manufacturer deviation in hardware implementation.  In 1997, William Kahan himself complained ({\emph justamente}) about the compromises inherent in the standard for compiler implementers:
 
@@ -152,7 +153,7 @@ Most computer linguists find floating-point arithmetic too disruptive [due to] [
 \end{quote}
 % https://people.eecs.berkeley.edu/~wkahan/ieee754status/IEEE754.PDF
 
-There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):\footnote{We do not lay blame at the feet of any particular party; the facts are the facts.  Indeed, IEEE 754 itself leads with a call for portability:  “This standard provides a discipline for performing floating-point computation that yields results independent of whether the processing is done in hardware, software, or a combination of the two” \citep{IEEE2008}.}
+There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):\footnote{We do not lay blame at the feet of any particular party; the facts are the facts.  Indeed, IEEE 754 itself leads with a call for portability:  “This standard provides a discipline for performing floating-point computation that yields results independent of whether the processing is done in hardware, software, or a combination of the two” \citep{IEEE754-2008}.}
 
 \begin{enumerate}
   \item  Optional, discretionary, or advisory aspects
@@ -200,6 +201,7 @@ IEEE 754 floating-point operations take place using one of four rounding modes.
   \item  Round toward negative infinity.  Down regardless of sign.
 \end{enumerate}
 
+\noindent
 The rounding mode can affect the result of computations, and if other processes are changing the mode (which can even be set per-thread), results may not be reliably reproducible.
 
 “Obtaining the correctly rounded result of an addition or subtraction operation requires an additional bit in the significand (as provided by the IEC 60559 guard bit) to hold the intermediate result” \citep[p.~65]{Jones2008}.
@@ -207,10 +209,9 @@ The rounding mode can affect the result of computations, and if other processes 
 
 \section{Urbit's Implementation of IEEE 754}
 
-Urbit implements a subset of IEEE 754 functionality in \texttt{/sys/hoon}, the Hoon language specification.  The Nock operations formally take place on integers.  In practice, we could imagine several ways of implementing such operations:  bitmasking the integers or breaking them apart into three components, for instance.  We take Urbit's implementation of \texttt{@rs} (single-precision \texttt{float}) as representative.\footenote{The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values \texttt{@rq} which are represented in the runtime by a pair of \texttt{double}s.}
+Urbit implements a subset of IEEE 754 functionality in \texttt{/sys/hoon}, the Hoon language specification.  The Nock operations formally take place on integers.  In practice, we could imagine several ways of implementing such operations:  bitmasking the integers or breaking them apart into three components, for instance.  We take Urbit's implementation of \texttt{@rs} (single-precision \texttt{float}) as representative.\footnote{The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values \texttt{@rq} which are represented in the runtime by a pair of \texttt{double}s.}
 
 \texttt{++rs} is a wrapper core to instrument arithmetic arms like \texttt{++add} using the \texttt{++ff} floating-point functionality core.  Ultimately this resolves to breaking out the components (sign, exponent, and significand) into separate numbers for the actual operation.\footnote{The decimal output is produced using the traditional Steele–White Dragon4 algorithm \citep{Steele1991}.  It is worth considering upgrading Hoon from Dragon4 to Errol \citep{Andrysco2016} for speed and accuracy.}
-% https://ranjitjhala.github.io/static/fp-printing-popl16.pdf
 
 The \texttt{++fn} core offers a generalized interface for a superset of IEEE 754-style floating-point implementations, permitting bit width, precision, bias, and rounding mode to be freely specified.\footnote{In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.}  The actual implementation on \texttt{+\$fn}-typed values is rather dense and features numerous rounding and overflow checks:
 
@@ -235,7 +236,7 @@ The \texttt{++fn} core offers a generalized interface for a superset of IEEE 754
   (rou [e.b (^add (lsh [0 (abs:si q)] a.a) a.b)])
 \end{lstlisting}
 
-There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are {\emph jetted}.\footnote{A shorthand for {\emph jet-accelerated code}.}  Thus the actual call in this case will correspond to some C code using the SoftFloat library:\footnote{\textt{u3} functions are Urbit noun library functions.  The \texttt{sing} union is a union of \texttt{uint32_t} and SoftFloat \texttt{float32_t} types.}
+There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are {\emph jetted}.\footnote{A shorthand for {\emph jet-accelerated code}.}  Thus the actual call in this case will correspond to some C code using the SoftFloat library:\footnote{\texttt{u3} functions are Urbit noun library functions.  The \texttt{sing} union is a union of \texttt{uint32\_t} and SoftFloat \texttt{float32\_t} types.}
 
 \lstset{language=C}
 \begin{lstlisting}
@@ -273,10 +274,8 @@ If you do the same thing twice, your computer should react the same way.  This i
 \end{quote}
 
 For most purposes in the broader software world, tightly reproducible precision has not been a high priority.  Precision having already been sacrificed, the gist of the calculation is more important than the fourth decimal place (e.g. in realtime 3D graphics).  This leads the phrase “implements the IEEE 754 standard” to be interpreted erroneously to imply full reproducibility \citep{Figueroa2000}.
-% S. A. Figueroa del Cid. A Rigorous Framework for Fully Supporting the IEEE Standard for Floating-Point Arithmetic in High-Level Programming Languages. PhD thesis, New York University, Jan. 2000.
 
 For example, consider the expression $(a \times b) + c$.  If a compiler permits the two operations to be evaluated sequentially (a multiplication followed by an addition), then rounding occurs twice.  If a compiler optimizes the operation into an FMA, or fused multiply-add, then a single rounding occurs.  \citeauthor{Peters2021} presents a pathological case for 32-bit single-precision floating-point values:  $a = 1.00000011920929$, $b = 53400708$, and $c = -b$.  In this case, the two-stage operation wipes out the $0.00000011920929$ component of $a$, yielding $a$ as an integer.  Then $c$ is added and the result is $8$.  With FMA as a single-step operation, the (correct) answer $6.365860462$ is obtained.  The optimization is more correct than the naïve route in this case.
-% https://momentsingraphics.de/FMA.html
 
 However, in another example due to \citeauthor{Dawson2013}, FMA yields incorrect results:  for $a \times b + c \times d$ with $a = c$ and $b = -d$, the answer should be zero, and calculated in two steps will typically be zero.  With a fused multiply-add, however, the code becomes \texttt{fmadd(a, b, c*d)}, rounding the multiplication of $c$ and $d$ but not that of $a$ and $b$; the answer will likely not be zero.
 
@@ -296,19 +295,16 @@ void f(void) {
 }
 \end{lstlisting}
 
+\noindent
 In this hypothetical case,“any extended precision bits will be lost in the first calculation of a+b when it is assigned to x. The result of the second calculation of a+b may be held in a working register at the extended precision and potentially contain additional value bits not held in x, the result of the equality test then being false.”
 
 \citet{Higham2002} provides further examples of pathological cases.
-%  HIGHAM N J (2002) _Accuracy and Stability of Numerical Algorithms_, (second ed.), Philadelphia, USA: SIAM.
 
 K \& R C permitted the compiler to re-order floating-point expressions by associativity, which could run afoul of our limitations.  ANSI C (C89), recognizing the issue introduced by this innocuous change, forbade such re-ordering \citep{MacDonald1991}.  Compiler optimizations (e.g. GCC's \texttt{-O3}) can bypass this restriction, once again breaking determinism;\footnote{This can be mitigated again in turn by the use of the \texttt{volatile} designation, but this is sufficient to illustrate the problem.} for instance, floating-point operations can be pipelined, leading to out-of-order execution.
-% MacDonald, Tom (1991). "C for Numerical Computing". _Journal of Supercomputing_. **5** (1): 31–48. [doi](https://en.wikipedia.org/wiki/Doi_(identifier) "Doi (identifier)"):[10.1007/BF00155856](https://doi.org/10.1007%2FBF00155856). [S2CID](https://en.wikipedia.org/wiki/S2CID_(identifier) "S2CID (identifier)") [27876900](https://api.semanticscholar.org/CorpusID:27876900).
 
 The fly in the ointment for Urbit is that deterministic computing requires deterministic computing; that is, jet-accelerated Nock equivalents must reliably produce the same results (both to each other and to Nock) regardless of the runtime on which it is being evaluated.  Thus even small irregularities in floating-point implementations have macroscopic ramifications for deterministic computing.  Any guarantee broken breaks them all, just as it would for a formal correctness proof.\footnote{I was once asked by a retired computer science professor if such guarantees would make things easier.  Well, at the end developer level!}
 
-The challenge of the lack of determinacy for certain critical applications has been acknowledged before, such as by James Demmel and the \texttt{ReproBLAS} team \citep{Demmel2013, ReproBLAS} and by \citeauthor{Dawson2013}.  Dawson makes much of the effect of rounding modes and the option to disable subnormals, both of which would have major effects on computational reproducibility.  The situation is in fact worse for transcendental functions, because there is necessarily truncation and/or rounding error
-% https://bebop.cs.berkeley.edu/reproblas/docs/talks/SC13.pdf
-% https://randomascii.wordpress.com/2013/07/16/floating-point-determinism/
+The challenge of the lack of determinacy for certain critical applications has been acknowledged before, such as by James Demmel and the \texttt{ReproBLAS} team \citep{Demmel2017, ReproBLAS} and by \citeauthor{Dawson2013}.  Dawson makes much of the effect of rounding modes and the option to disable subnormals, both of which would have major effects on computational reproducibility.  The situation is in fact worse for transcendental functions, because there is necessarily truncation and/or rounding error
 
 (The situation is in fact worse for transcendental functions \citep{Dawson2013}.)
 % Conversion between bases – such as _printf(“%1.8e”);_ – is not guaranteed to be identical across all implementations. Doing perfect conversions efficiently was an unsolved problem when the original IEEE standard came out and while it has since been solved this doesn’t mean that everybody does correctly rounded printing
@@ -327,7 +323,7 @@ We consider each in turn, with its ramifications for a deterministic computing p
 
 \subsection{Hardware-supported floating-point arithmetic}
 
-As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, nonnegligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be {\emph prima facie} unviable for deterministic computing.\footnote{Although not of grave consequence, the C language (as of C23) does not implement at least two types specified by IEEE 754-2019 and recent predecessors:  \texttt{binary128} quadruple precision and \texttt{binary256} octuple precision.  While neither are significant losses, we also note that Urbit does not currently support a C-style \texttt{long double} type.  C's \texttt{long double} is 80 bits wide on some common consumer hardware, such as the x86-64 architecture, but is 128 bits wide on the 64-bit ARM architecture.  (The situation is worse for Python, whose \texttt{numpy.float128} type eponymously advertises itself as quadruple precision but is in fact a regular 80-bit \texttt{long double}.)  Some compilers and libraries do support quadruple-precision floating-point mathematics, such as GCC's \texttt{__float128} type.  We note that IEEE 754 80-bit extended-precision could be implemented using the \texttt{++fn} core should demand arise.}
+As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, nonnegligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be {\emph prima facie} unviable for deterministic computing.\footnote{Although not of grave consequence, the C language (as of C23) does not implement at least two types specified by IEEE 754-2019 and recent predecessors:  \texttt{binary128} quadruple precision and \texttt{binary256} octuple precision.  While neither are significant losses, we also note that Urbit does not currently support a C-style \texttt{long double} type.  C's \texttt{long double} is 80 bits wide on some common consumer hardware, such as the x86-64 architecture, but is 128 bits wide on the 64-bit ARM architecture.  (The situation is worse for Python, whose \texttt{numpy.float128} type eponymously advertises itself as quadruple precision but is in fact a regular 80-bit \texttt{long double}.)  Some compilers and libraries do support quadruple-precision floating-point mathematics, such as GCC's \texttt{\_\_float128} type.  We note that IEEE 754 80-bit extended-precision could be implemented using the \texttt{++fn} core should demand arise.}
 
 We do not know the field of possible future hardware architectures which Nock as a deterministic computing platform may be called upon to execute.  Jet-accelerated code should be intelligently robust about its the hardware, but Hoon and Nock code should be completely agnostic to the hardware.
 
@@ -351,8 +347,7 @@ We also must decide what the target is.  Do we aim for the most portable configu
 
 For instance, suppose that one intended to use the C keyword \texttt{volatile} to block certain common optimizations on a floating-point value.\footnote{In any case, this assumes a legible and enumerable set of behaviors for \texttt{volatile} which is, alas, not the case.  “\texttt{volatile} is a hint to the implementation to avoid aggressive optimization involving the object because the value of the object might be changed by means undetectable by an implementation” \citep[p.~472]{Jones2008}.  “Actions on objects so declared shall not be ‘optimized out’ by an implementation or reordered except as permitted by the rules for evaluating expressions” \citep[p.~1500]{Jones2008}.  “The \texttt{volatile} qualifier only indicates that the value of an object may change in ways unknown to the translator (therefore the quality of generated machine code may be degraded because a translator cannot make use of previous accesses to optimize the current access)” \citep[p.~963]{Jones2008}.  The same author provides examples of C code that is ambiguous in \texttt{volatile}'s semantics, pp.~1290–1291; and undefined in \texttt{volatile}'s semantics, pp.~1482–1483.}  The runtime at the level of Nock does not know if a value is considered floating-point or not.  At the level of a jet, the use of \texttt{volatile} can correctly bar certain hardware optimizations, but these need to be carefully enumerated and understood in the light of the other toolchain concerns enumerated in this section.  Strictly speaking, \texttt{volatile} only seeks to guarantee that stale calculations are not inadvertently reused due to optimization.  Without hardware optimization, the utility of an FLU for fast floating-point computations is questionable.  The risk of a jet mismatch remains high, as does a nonportable jet.\footnote{“What constitutes an access to an object that has volatile-qualified type is implementation-defined” \citep[p.~1488]{Jones2008}.  “Volatile-qualified objects can also be affected by translator optimizations” \citep[p.~1490]{Jones2008}.  The C novice may at this point wonder what the intended utility of \texttt{volatile} in fact is:  “[a] \texttt{volatile} declaration may be used to describe an object corresponding to a memory-mapped input/output port or an object accessed by an asynchronously interrupting function” \citep[p.~1499]{Jones2008}.}
 
-Can the C-defined floating-point environment (as supplied by \texttt{fenv.h}) answer to this need?  This augurs the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear that this environmental control spans the entire output of floating-point computations.\footnote{“The floating-point environment access and modification is only meaningful when \texttt{#pragma STDC FENV_ACCESS} is set to \texttt{ON}.  \ldots{} In practice, few current compilers, such as HP aCC, Oracle Studio, and IBM XL, support the \texttt{#pragma} explicitly, but most compilers allow meaningful access to the floating-point environment anyway.” \citep{CPPRef}}
-% https://en.cppreference.com/w/c/numeric/fenv
+Can the C-defined floating-point environment (as supplied by \texttt{fenv.h}) answer to this need?  This augurs the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear that this environmental control spans the entire output of floating-point computations.\footnote{“The floating-point environment access and modification is only meaningful when \texttt{\#pragma STDC FENV\_ACCESS} is set to \texttt{ON}.  \ldots{} In practice, few current compilers, such as HP aCC, Oracle Studio, and IBM XL, support the \texttt{\#pragma} explicitly, but most compilers allow meaningful access to the floating-point environment anyway.” \citep{CPPRef}}
 
 Finally, “[a]n implementation is not required to provide a facility for altering the modes for translation-time arithmetic, or for making exception flags from the translation available to the executing program” \citep[p.~200]{Jones2008}.  The information we purport to gain by controlling the stack in the manner above outlined is possibly not even available to the compiler and the runtime executable.
 
@@ -365,7 +360,6 @@ If you knew what the compiler and execution stack behavior looked like when a ca
 Hardware simulation faces some difficulties in the same vein as controlling the stack.  The proposal yields a combinatorial explosion when considering the combinations of hardware chips, compilers, and compiler flags.  Nor is it clear that hardware documentation can be accrued in sufficient quantity and detail to guarantee the success of such a project.
 
 The Urbit runtime provides an epoch system, meaning that the event log is separated into snapshots and subsequent events \citep{UrbitEpoch}.  This is currently used to monitor the use of old binaries which could potentially have a jet mismatch.  It would be moderately straightforward to extend this functionality to record the compilation flags and architecture of that Vere binary, which could be useful in event playback.  However, this remains an unsatisfactory solution because it would lead to Urbit runtime instances intentionally producing different code (rather than a jet mismatch which would require correction).
-% https://roadmap.urbit.org/project/epoch-system
 
 \subsubsection{Support a single hardware platform}
 
@@ -386,7 +380,6 @@ One could also envision docking more than the last bit.  This introduces a step 
 In general, we cannot assign a high degree of significance to figures beyond the first few, but accruals across large data sets (such as large language models) can become significant (as attested to by the need for compensated summation).
 
 A related technique could pack bits of larger floating-point values into smaller ones, but this is functionally a software-defined solution (see, e.g., \citet{LeBrun2018}).
-% https://www.ctrl-alt-test.fr/2018/making-floating-point-numbers-smaller/
 
 \subsubsection{Consistency checks}
 
@@ -402,12 +395,10 @@ In the absence of a dedicated floating-point unit (FPU) and floating-point assem
 
 Urbit's current solution for floating-point computation is to utilize a software-defined floating-point library, the SoftFloat library by \citeauthor{Hauser2018}.  SoftFloat is an implementation in software of a subset of IEEE 754 for five floating-point types.\footnote{“The current release supports five binary formats: 16-bit half-precision, 32-bit single-precision, 64-bit double-precision, 80-bit double-extended-precision, and 128-bit quadruple-precision” \citep{Hauser2018}.}  Urbit statically links the library into its runtime binary so it is always available for Nock to utilize as a jet.
 
-While formally correct, software FP is slower than hardware FP, and likely prohibitively slow for many large matrix applications such as LLMs.  (“Correctness is more important than performance.”)  Performance is the dolorous stroke against software-defined floating point.  (On the other hand, some early versions of the Apple–IBM–Motorola PowerPC RISC architecture did not have dedicated hardware floating-point units (FPUs) or floating-point assembler instructions at all, requiring full software implementation.\footnote{“There are several 680x0-based Macintosh computers that do not contain floating-point coprocessors” \citep{Apple1996}; on the other hand, “floating-point calculations are performed even faster under the … emulator than on a real 680x0-based Macintosh computer,” indicating that optimized software acceleration is possible, modulo chipset versions and tuned libraries.  The PowerPC 601, introduced in 1991, had a native FPU.})
-% https://developer.apple.com/library/archive/documentation/mac/pdf/PPC_System_Software/Intro_to_PowerPC.pdf
-% https://hashingit.com/elements/research-resources/2006-01-improving_software_floating_point_support.pdf
+While formally correct, software FP is slower than hardware FP, and likely prohibitively slow for many large matrix applications such as LLMs.  (“Correctness is more important than performance.”)  Performance is the dolorous stroke against software-defined floating point.  (On the other hand, some early versions of the Apple–IBM–Motorola PowerPC RISC architecture did not have dedicated hardware floating-point units (FPUs) or floating-point assembler instructions at all, requiring full software implementation.\footnote{“There are several 680x0-based Macintosh computers that do not contain floating-point coprocessors” \citep{Apple1994}; on the other hand, “floating-point calculations are performed even faster under the … emulator than on a real 680x0-based Macintosh computer,” indicating that optimized software acceleration is possible, modulo chipset versions and tuned libraries.  The PowerPC 601, introduced in 1991, had a native FPU.})
+% TODO refer to https://hashingit.com/elements/research-resources/2006-01-improving_software_floating_point_support.pdf
 
-An optimized portable deterministic software library for floating-point calculations may be a sufficiently fast solution to meet Urbit's needs even for vector computations.  A different avenue worthy of investigation is to take IEEE 754 compliant floating-point values as inputs and outputs, then transform into a local representation for an optimized portable deterministic calculation.  For instance, \citet{Thall2007} presents the concept of “unevaluated sums”, a generalized technique for accruing error in situations where additional precision is necessary for accuracy.  However, even with an agreed-upon standard library like SoftFloat, it is important to keep in mind that results like transcendental functions are still not correctly known.\footnote{To correctly calculate a trigonometric function for \texttt{double} may take over a hundred bits of precision before correct rounding can be determined.  Furthermore, the C \texttt{math.h} implementation of $sin$ may or may not use \texttt{fsin}.}  This particular poses a problem for functions like $sin$ which may be calculated by different routes in Hoon/Nock and in C/Rust.  For the time being, we conclude that Urbit's discipline requires only using Hoon/Nock implementations of transcendental functions.
-% Thall, Andrew (2007). Extended-Precision Floating-Point Numbers for GPU Computation. Technical Report CIM-007-01. The University of North Carolina at Chapel Hill. [Author's version](http://andrewthall.org/papers/df64_qf128.pdf)
+An optimized portable deterministic software library for floating-point calculations may be a sufficiently fast solution to meet Urbit's needs even for vector computations.  A different avenue worthy of investigation is to take IEEE 754 compliant floating-point values as inputs and outputs, then transform into a local representation for an optimized portable deterministic calculation.  For instance, \citet{Thall2007} presents the concept of “unevaluated sums”, a generalized technique for accruing error in situations where additional precision is necessary for accuracy.  However, even with an agreed-upon standard library like SoftFloat, it is important to keep in mind that results like transcendental functions are still not correctly known.\footnote{To correctly calculate a trigonometric function for \texttt{double} may take over a hundred bits of precision before correct rounding can be determined.  Furthermore, the C \texttt{math.h} implementation of $\sin$ may or may not use \texttt{fsin}.}  This particular poses a problem for functions like $\sin$ which may be calculated by different routes in Hoon/Nock and in C/Rust.  For the time being, we conclude that Urbit's discipline requires only using Hoon/Nock implementations of transcendental functions.
 
 \subsection{Opaque calculations}
 
@@ -434,7 +425,6 @@ Instead of repeating computations that have been made in the past, what if we ca
 
 \begin{quote}
 A recently proposed hardware acceleration technique is to store the results of previous multiplication and division operations in a cache, reusing rather than recalculating the result whenever possible. (Dynamic profiling has found that a high percentage of these operations share the same operands as previous operations.)  \citep[p.~1148]{Jones2008}\footnote{Cf. Jones' citation of \citeauthor{Citron1998}.}
-%  D. Citron, D. Feitelson, and L. Rudolph. Accelerating multi-media processing by implementing memoing in multiplication and division units. In Proceedings of 8th International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS-VIII), pages 252–261, 1998.
 \end{quote}
 
 On Urbit, this introduces an $O(1)$ average-case/$O(n)$ worst-case cache lookup from a MurmurHash3 hash key calculation (what Urbit calls a \texttt{++mug}).  This must be weighed against the floating-point algorithm in consideration, as well as what is actually hashed (likely the Nock of the calculation contained in the dynamic hint).
@@ -442,7 +432,6 @@ On Urbit, this introduces an $O(1)$ average-case/$O(n)$ worst-case cache lookup 
 This bears some similarities to aspects of the network call suggestion above, in that the second objection to that one holds here.  Event log and state bloat (via the cache) are liabilities.  Such a cache would be a feature of the Arvo instance, not the runtime VM.  Unlike a truncated event log, the cache must be a permanent feature of the ship's state rather than a convenience.
 
 “Storing results” could also be met by the use of SPARC-style logging.  In that hardware platform, suspicious computations are flagged and hashed into a lookup table by site in the originating program.  Such events are logged not by timestamp or by computation hash but by callsite in the originating program \citep[p.~6]{Kahan1997}.\footnote{What constitutes “suspicion” is only sparsely elaborated by Kahan in that article.}  Sun implemented this in SPARC for “retrospective diagnostics” but the technique could allow a more lapidary operation for Urbit.  (Follow-on considerations include whether such computations should now be considered “bound” in a sense like that of the scry namespace.)
-% https://people.eecs.berkeley.edu/~wkahan/ieee754status/IEEE754.PDF
 
 \subsection{Proscribing IEEE 754}
 
@@ -454,20 +443,19 @@ One solution to the speed-vs.-reproducibility dilemma is to permit hardware-acce
 
 What degree of vetting will reliably answer the gap between IEEE 754 and hardware implementation for any particular operation?  \citet[pp.~330ff.]{Jones2008} and \citet{Goldberg1991} provide a careful analysis of accuracy errors inherent to IEEE 754 as a standard, but due to the variety of possible scenarios do not treat of real compilers and chipsets much.\footnote{See particularly the note on “Common Implementations” on p.~346 of \citet{Jones2008}.}  Trivially, as demonstrated above in the Python example, $(a + b) + c \neq a + (b + c)$, and even modest reordering of operations by a zealous compiler optimization is susceptible of introducing nonportable and thus nondeterministic (in our sense) behavior.
 
-Having identified an appropriate subset of operations, we may imagine that the use of \texttt{#ifdef}, Autotools’ \texttt{configure}, and a jetting library may answer to our need.  Any jet library would have to be carefully constructed to avoid imposing tight discipline directly on the end user (modal Hoon author).  We cannot recommend this path today but do not consider the way to be shut, especially given liberal use of \texttt{volatile}.
+Having identified an appropriate subset of operations, we may imagine that the use of \texttt{\#ifdef}, Autotools’ \texttt{configure}, and a jetting library may answer to our need.  Any jet library would have to be carefully constructed to avoid imposing tight discipline directly on the end user (modal Hoon author).  We cannot recommend this path today but do not consider the way to be shut, especially given liberal use of \texttt{volatile}.
 
 In particular, fused multiply-add operations are subject to reordering by an optimizing compiler.  Avoiding these would require some discipline on the part of the jet developer, since code that does not explicitly \texttt{fma} may yet reduce to it in a compiler pass.  A jetting library would be advantageous in this case.
 
-As an example of a refactoring of IEEE 754 operations for determinism, consider the \texttt{ReproBLAS} project (last update \asciitilde 2016.2.21).   \texttt{ReproBLAS} seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS \citep{ReproBLAS}.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.\footnote{“Using our default settings, reproducibly summing n floating point types requires approximately $9n$ floating point operations (arithmetic, comparison, and absolute value). In theory, this count can be reduced to 5n using the new "augmented addition" and "maximum magnitude" instructions in the proposed IEEE Floating Point Standard 754-2018.”  \citep{ReproBLAS}}  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around \texttt{-O0}.
-% ReproBLAS https://bebop.cs.berkeley.edu/reproblas/index.php
+As an example of a refactoring of IEEE 754 operations for determinism, consider the \texttt{ReproBLAS} project (last update \textasciitilde 2016.2.21).   \texttt{ReproBLAS} seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS \citep{ReproBLAS}.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.\footnote{“Using our default settings, reproducibly summing $n$ floating point types requires approximately $9n$ floating point operations (arithmetic, comparison, and absolute value). In theory, this count can be reduced to 5n using the new "augmented addition" and "maximum magnitude" instructions in the proposed IEEE Floating Point Standard 754-2018.”  \citep{ReproBLAS}}  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around \texttt{-O0}.
 
 \paragraph{Proscribe by replacement.}
 
 Finally, we face the possibility of jettisoning decades of floating-point libraries entirely and forging a new trail.  We explicitly omit attempting to implement a new standard as hubristic, but would like to explore some alternatives.
 
-\subparagraph{Posits}.
+\subparagraph{Posits}
 
-In 2015, John Gustafson proposed a new standard for representing values drawn from $\mathbb{R}$ called universal numbers or unums \citep{Gustafson2015, Gustafson2017, Posit2022}.  The current version of unums, called posits, supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
+In 2015, John Gustafson proposed a new standard for representing values drawn from $\mathbb{R}$ called universal numbers or unums \citep{Gustafson2015, Gustafson2017, Gustafson2017a, Posit2022}.  The current version of unums, called posits, supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
 
 Gustafson's criticisms of IEEE 754 focused on determinism and exactness; underflow and overflow; fixed bit widths for mantissa and exponent; rounding; and the large wasted block of NaNs \citep{Risse2016}.  Unums likewise must provide sign, exponent with bias, and significand; they additionally signal whether the value is an interval.  Unlike IEEE 754's use of multiple bit widths, 32-bit posits are argued to be sufficient for almost all applications.
 
@@ -481,15 +469,14 @@ Gustafson's criticisms of IEEE 754 focused on determinism and exactness; underfl
 % https://www.vts.su.ac.rs/data/files/1/uploads/sip2016/proceedings/10_Risse_SIP2016.pdf
 
 A unum/posit implementation for Urbit would be as straightforward as the implementation of IEEE 754.  For jetting, there is a software library for posits called SoftPosit based on the SoftFloat library \citep{Cerlane2018}.  A number of other software implementations exist, but at the time of writing no hardware support has been noted.  (Since there are no hardware implementations, the effect of optimizations on determinism cannot yet be assessed; it is presumed that the situation will be better than IEEE 754 given the advantages of a clean slate.)
-% https://gitlab.com/cerlane/SoftPosit
 
-\subparagraph{Hand-rolled \texttt{float}s}.
+\subparagraph{Hand-rolled \texttt{float}s}
 
 If IEEE 754 presents too many difficulties to be viable at high speed, then hand-rolling a custom hybrid hardware–software scheme via bitmasking could be attractive.  This returns to the more “Wild West” days before IEEE 754's introduction, but is presaged by the recent introduction of \texttt{bfloat16}, \texttt{TensorFlow-32}, and other types designed for machine learning applications.  Without access to hardware manufacturers, however, this amounts in the end to software-defined floating point and seems unlikely to be competitive speedwise.  (We cite the idea put forth previously in this article to convert to an intermediate representation for computation, yielding IEEE 754 as necessary.)
 
 It may also be worth considering the use of a 3-tuple of sign, exponent, and significand (with only software jetting), and leave details of jet implementation to library authors.
 
-\subparagraph{Fixed-point and \texttt{Q}}.
+\subparagraph{Fixed-point and $\mathbb{Q}$}
 
 A fixed-point representation differs from a floating-point scheme in that the exponent is fixed by the protocol or metadata and thus only the sign and significand need be included in the bit representation.  (With an offset, even the sign can be elided.)  The advantage of such a scheme is that it affords the benefits of floating-point mathematics at near-integer operation speeds (e.g. left-shift to multiply by two).  One disadvantage is that there is a smallest representable value; this lack of subnormals requires either an underflow handler or the possibility of inadvertent division by zero.  Fixed-point operations could also be used as intermediates in calculations.  (This echoes once again the idea of conversion to an intermediate representation then conversion back out to IEEE 754.)\footnote{“One solution to implementing floating-point types on processors that support fixed-point types is to
 convert the source containing floating-point data operations to make calls to a fixed-point library” \citep[p.~346]{Jones2008}.  Note that the sense of our current interest is reversed.}
@@ -503,8 +490,7 @@ However, deviation from the proscription scheme, even inadvertently, would mean 
 
 Any approach to modeling real numbers runs the risk that different calculation pathways will yield a different kind of inexactness in the result.  These can be mitigated by some of the approaches suggested above, and also by checking the correspondence of the Hoon code and the underlying jet, particular for known edge cases in behavior.  While Hoon–jet compliance is an open research problem,\footnote{Particularly as regards co-generation of Hoon and C/Rust, or formal proofs.} we can apply principles of unit testing together with a period of testing Nock and jet compliance.\footnote{The Vere runtime supports a debugging flag which runs both the Nock and the jet and checks for identical results.}
 
-Jet mismatches have been rare in the current era.\footnote{By “current era”, we mean after the last global network breach in \asciitilde 2020.12 \citep{UrbitBreach}.}  Some jet “mismatches” occur because the runtime raises a different error than the corresponding Hoon—these are relatively innocuous.  Others may occur because actually different results are produced for different input.  These are grave, and ultimately motivated the introduction of the epoch system so that event log replays can take into account the previous less-perfect jet version in the runtime \citep{UrbitEpoch}.
-% UrbitBreach https://roadmap.urbit.org/project/last-network-breach
+Jet mismatches have been rare in the current era.\footnote{By “current era”, we mean after the last global network breach in \textasciitilde 2020.12 \citep{UrbitBreach}.}  Some jet “mismatches” occur because the runtime raises a different error than the corresponding Hoon—these are relatively innocuous.  Others may occur because actually different results are produced for different input.  These are grave, and ultimately motivated the introduction of the epoch system so that event log replays can take into account the previous less-perfect jet version in the runtime \citep{UrbitEpoch}.
 
 \section{Linear Algebra in Hoon}
 
@@ -519,6 +505,7 @@ Lagoon\footnote{Linear AlGebra in hOON} is an Urbit library to facilitate Hoon-n
   \item  \texttt{\%fixp}, a fixed-precision value
 \end{enumerate}
 
+\noindent
 for which \texttt{\%real} allows the rounding mode to be specified; and \texttt{\%fixp} requires an additional metadata statement of the expected precision.
 
 Lagoon implements algorithmically correct reference implementation in Hoon with the expectation that \texttt{/lib/lagoon} will be jetted.  Operations include basic arithmetic, vector and matrix row/column operations, matrix multiplication, and matrix inversion.  The jetting scheme may take advantage of software libraries or appropriate hardware, but must hew to the dictum that “if it's not deterministic, it isn't real.”
@@ -540,10 +527,8 @@ To summarize, the most promising solutions for floating-point mathematics on Urb
 \end{enumerate}
 
 Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.\footnote{UWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved); \texttt{lazytrig}, which is slow and implemented purely in Hoon (Nock); Lagoon, which includes IEEE 754 operations with its linear algebra library ({\emph q.v.}); and Lora, TODO.}  We anticipate that, water finding its own level, each will adopt a suitable solution for the deterministic Nock platform.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics.
-% UWasm https://github.com/Quodss/urwasm
-% KloudKoder2008 https://github.com/WebAssembly/design/issues/1456
+% UWasm 
 
-\backmatter
 \bibliographystyle{plainnat}
 \bibliography{ustj-fp}
 \end{document}

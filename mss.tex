@@ -46,7 +46,8 @@
 
 %%MANUSCRIPT
 \title{Floating-Point Arithmetic on Deterministic Systems}
-\author{Neal E. Davis \texttt{\textasciitilde lagrev-nocfep}}
+\author{Neal E. Davis \texttt{\textasciitilde lagrev-nocfep} \\ Urbit Foundation}
+\date{}
 
 \begin{document}
 
@@ -245,7 +246,7 @@ Urbit implements a subset of IEEE 754 functionality in \texttt{/sys/hoon}, the H
 
 The \texttt{++fn} core offers a generalized interface for a superset of IEEE 754-style floating-point implementations, permitting bit width, precision, bias, and rounding mode to be freely specified.\footnote{In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.}  The actual implementation on \texttt{+\$fn}-typed values is rather dense and features numerous rounding and overflow checks:
 
-\lstset{language=Hoon}
+%\lstset{language=Hoon}
 \begin{lstlisting}
 ++  add
   |=  [a=[e=@s a=@u] b=[e=@s a=@u] e=?]  ^-  fn

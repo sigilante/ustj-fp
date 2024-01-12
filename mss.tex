@@ -29,7 +29,7 @@
 \thispagestyle{firststyle}
 
 \begin{abstract}
-Floating-point calculations are critical to a number of special domains in modern computing, including machine learning, graphics, and scientific computing.  Numerical calculations are particularly subject to opaque and system-local optimizations, which can break certain guarantees for deterministic computers.  We consider the background and implementation of IEEE 754 floating-point arithmetic and options for implementing it compatibly with fully reproducible computing.  We examine hardware-based and software-based proposals.
+Floating-point calculations are critical to a number of special domains in modern computing, including machine learning, graphics, and scientific computing.  Numerical calculations are particularly susceptible to opaque and system-local optimizations, which can break certain guarantees for deterministic computers.  We consider the background and implementation of IEEE 754 floating-point arithmetic and options for implementing mathematics compatibly with fully reproducible and portable computing.  We consider hardware-based and software-based proposals.
 \end{abstract}
 
 \tableofcontents
@@ -42,9 +42,9 @@ Floating-point operations are a technically complex subject and the extent to wh
 
 Modern digital computers deal, at their root, in binary representation, entirely zeros and ones.\footnote{Analog computers may operate on a continuum of value.  Computer logic systems may be architected on other numeric bases for their logic, such as the 1837 Analytical Engine's decimal system and the 1958 Setun's (Сетунь) ternary system.}  These are often formally considered to be whole numbers in a number base of two.  However, numerical calculations very frequently require the use of numbers with a fractional part to adequately represent the elements of a computation.
 
-Early numeric computing tended to focus on problems of interest to military and national security applications, such as partial differential equations and numerical optimization.  Such calculations typically involve arrays, and linear algebra was elaborated hand-in-hand with digital computing techniques in software and hardware.  Numerics assumed even greater prominence with the rise of three-dimensional gaming, with a particular emphasis on speed over correctness.\footnote{This is reflected in algorithms such as the “fast inverse square root”, which permits a degree of inaccuracy in exchange for a substantial speedup.}  Error accrual in such cases is deterministic, but 
+Early numeric computing tended to focus on problems of interest to military and national security applications, such as partial differential equations and numerical optimization.  Such calculations typically involve arrays, and linear algebra was elaborated hand-in-hand with digital computing techniques in software and hardware.  Numerics assumed prominence for a wider audience with the rise of gaming on personal computers, although these algorithms emphasized speed over exactness.\footnote{This is reflected in algorithms such as the “fast inverse square root”, which permits a degree of inaccuracy in exchange for a substantial speedup.}  To this point in the history of computing, most software either ran on a single platform for its lifetime (as with supercomputing) or did not require portably deterministic algorithms (as with gaming).\footnote{To be clear, 3D gaming algorithms are deterministic (assuming no random sources are used), but exact error values are often not reproducible across platforms, nor was this a design criterion.  The reasons for this are discussed below.}
 
-On the other hand, deterministic computing describes the ability for a given computation be reproducible exactly.  Such reproducibility permits referential transparency and more powerful reasoning about a program's results and dependencies.  This includes, for Urbit as a state machine, that the event log replay across platforms to the same result.
+On the other hand, deterministic computing describes the ability for a given computation be reproducible exactly.  Such reproducibility permits referential transparency and more powerful reasoning about a program's results and dependencies.  This includes, for Urbit as a state machine, that the event log replay be portable across platforms to yield the same result.  Conceptual guarantees must be backstopped by actual implementation guarantees for determinism to hold.
 
 \section{The Field of the Reals}
 
@@ -67,7 +67,7 @@ Early computer systems with floating-point units chose bespoke but incompatible 
 SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
 \end{lstlisting}
 
-where \texttt{S} is the sign bit, \texttt{0} for $+$ and \texttt{1} for $-$; \texttt{E} is the exponent in base-2 (8 bits); and \texttt{F} is the significand (23 bits).  The exponent is actually calculated at an offset bias of 127 ($2^{7}$) so that a more expressive range of orders of magnitude can be covered.  The significand has an implied leading \texttt{1} bit unless all are zero.  To wit,
+where \texttt{S} is the sign bit, \texttt{0} for positive ($+$) and \texttt{1} for negative ($-$); \texttt{E} is the exponent in base-2 (8 bits); and \texttt{F} is the significand (23 bits).  The exponent is actually calculated at an offset bias of 127 ($2^{7}$) so that a more expressive range of orders of magnitude can be covered.  The significand has an implied leading \texttt{1} bit unless all are zero.  To wit,
 
 $$
 (-1)^{\mathtt{S}} \times 2^{\mathtt{E}-127} \times 1.\mathtt{F}
@@ -123,7 +123,7 @@ Truncation error results from terminating repeating “binaries” (by analogy w
  
 \paragraph{Machine epsilon.}
 
-The machine epsilon, or smallest value discernable from 1.0, is determined by the precision of the floating-point representation.  The machine epsilon for a particular bit width is determined by setting two to the negative power of the number of bits used for the magnitude of the mantissa and accounting for the leading implicit bit \texttt{1}; for 32-bit single-precision \texttt{float} this is $2^-{23-1} = 2^{-22}$.  Differences from 1.0 smaller than this cannot be represented in this bit width.
+The machine epsilon, or smallest value discernable from 1.0, is determined by the precision of the floating-point representation.  The machine epsilon for a particular bit width is determined by setting two to the negative power of the number of bits used for the magnitude of the mantissa and accounting for the leading implicit bit \texttt{1}; for 32-bit single-precision \texttt{float} this is $2^{-{23-1}} = 2^{-22}$.  Differences from 1.0 smaller than this cannot be represented in this bit width.
 
 \paragraph{Sequence ordering.}
 
@@ -150,7 +150,7 @@ Most computer linguists find floating-point arithmetic too disruptive [due to] [
 \end{quote}
 % https://people.eecs.berkeley.edu/~wkahan/ieee754status/IEEE754.PDF
 
-There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):\footnote{We do not lay blame at the feet of any particular party; the facts are the facts.  Indeed, IEEE 754 itself leads with a call for portability:  “This standard provides a discipline for performing floating-point computation that yields results independent of whether the processing is done in hardware, software, or a combination of the two” \citep{IEEE754-2008}.}
+There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):\footnote{We do not lay blame at the feet of any particular party; the facts are the facts.  Indeed, a more recent revision of IEEE 754 leads with a call for portability:  “This standard provides a discipline for performing floating-point computation that yields results independent of whether the processing is done in hardware, software, or a combination of the two” \citep{IEEE754-2008}.}
 
 \begin{enumerate}
   \item  Optional, discretionary, or advisory aspects.
@@ -166,7 +166,7 @@ Several aspects of IEEE 754 are optional or advisory, including:
 \begin{enumerate}
   \item  Exception handling means that the hardware may specify rounding via an overflow flag.
   \item  Extended precisions formats are not a huge deal to leave out, but extended precision arithmetic (used for intermediate results) can materially change results.
-  \item  Subnormals are optional; some platforms may flush them to zero or (worse) allow subnormal support to be disabled in certain cases.\footnote{“Some processors do not support subnormal numbers in hardware” \citep[p.~338]{Jones2008}.  (The risk is that this permits inadvertent division by zero.)  Various chipsets solve this exceptional behavior differently.}
+  \item  Subnormals are optional;\footnote{Subnormals are a convention that allows values smaller than the “normal” IEEE 754 smallest non-zero value.  They permit a graceflow underflow behavior, and can prevent an unintentional division by zero.} some platforms may flush them to zero or (worse) allow subnormal support to be disabled in certain cases.\footnote{“Some processors do not support subnormal numbers in hardware” \citep[p.~338]{Jones2008}.  (The risk is that this permits inadvertent division by zero.)  Various chipsets solve this exceptional behavior differently.}
 \end{enumerate}
 
 \subparagraph{Omissions.}
@@ -258,7 +258,7 @@ Why SoftFloat?  Enter, stage left, the problem of platform-portable determinism.
 
 \section{Deterministic Computation with a Fractional Part}
 
-Non-real arithmetic is less significant for many of the core operations of Urbit as a personal server platform.  However, gaming, machine learning, graphics, and other applications rely on floating-point calculations—preferably as fast as possible.  In fact, not only applications-oriented processes rely on determinism:  guarantees in cryptography and contractual correctness for web3; verification and validation; and code correctness analysis all require reproducible determinism.\footnote{Support for IEEE 754 is similar for support for the Markdown markup language.  Many platforms support a subset of Markdown coupled with platform-specific extensions.  (See also SQL.)  Internal references, HTML, inline \LaTeX math mode, code block language specification, and other features see varying levels of support with GitHub, Pandoc, Obsidian, and other editors and converters.}
+Non-real arithmetic is less significant for many of the core operations of Urbit as a personal server platform.  However, gaming, machine learning, graphics, and other applications rely on floating-point calculations—preferably as fast as possible.  In fact, not only applications-oriented processes rely on determinism:  guarantees in cryptography and contractual correctness for web3; verification and validation; and code correctness analysis all require reproducible determinism.\footnote{Support for IEEE 754 is similar for support for the Markdown markup language.  Many platforms support a subset of Markdown coupled with platform-specific extensions.  (See also SQL.)  Internal references, HTML, inline \LaTeX~math mode, code block language specification, and other features see varying levels of support with GitHub, Pandoc, Obsidian, and other editors and converters.}
 
 Why can't we just allow different results in the last binary places of the significand?  Philosophically, Urbit holds the following statements as bedrock truth \citep{Monk2020}:
 
@@ -298,9 +298,7 @@ void f(void) {
 \end{lstlisting}
 
 \noindent
-In this hypothetical case, “any extended precision bits will be lost in the first calculation of a+b when it is assigned to x. The result of the second calculation of a+b may be held in a working register at the extended precision and potentially contain additional value bits not held in x, the result of the equality test then being false.”
-
-\citet{Higham2002} provides further examples of pathological cases.
+In this hypothetical case, “any extended precision bits will be lost in the first calculation of a+b when it is assigned to x. The result of the second calculation of a+b may be held in a working register at the extended precision and potentially contain additional value bits not held in x, the result of the equality test then being false.”  \citet{Higham2002} provides further examples of pathological cases.
 
 K\&R C permitted the compiler to re-order floating-point expressions by associativity, which could run afoul of our limitations.  ANSI C (C89), recognizing the issue introduced by this innocuous change, forbade such re-ordering \citep{MacDonald1991}.  Compiler optimizations (e.g. GCC's \texttt{-O3}) can bypass this restriction, once again breaking determinism;\footnote{This can be mitigated in turn by the use of the \texttt{volatile} designation, but this is sufficient to illustrate the problem.} for instance, floating-point operations can be pipelined, leading to out-of-order execution.
 
@@ -327,7 +325,7 @@ As outlined above, execution of software-equivalent floating-point computations 
 
 We do not know the field of possible future hardware architectures which Nock as a deterministic computing platform may be called upon to execute.  Jet-accelerated code should be intelligently robust about its the hardware, but Hoon and Nock code should be completely agnostic to the hardware.
 
-That's the problem.  What are some possible hardware-based solutions?
+That's the problem.  What are some possible hardware-targeted solutions?
 
 \begin{enumerate}
   \item  Control the compiler and runtime stack top to bottom.
@@ -339,7 +337,7 @@ That's the problem.  What are some possible hardware-based solutions?
 
 \subsubsection{Control the stack}
 
-If you controlled the compiler and runtime execution stack to a sufficient degree, could you yield deterministic floating-point arithmetic from the hardware?  “A translator that generates very high performance code is of no use if the final behavior is incorrect” \citep[p.~189]{Jones2008}.
+If you controlled the compiler and runtime execution stack to a sufficient degree, could you yield deterministic floating-point arithmetic from the hardware?  “A translator that generates very high performance code is of no use if the final behavior is incorrect” \citep[p.~189]{Jones2008}; that is, optimizations often come at the cost of correctness.
 
 To start off, what must be considered part of the stack in this sense?  At a minimum, the compiler and linker toolchain (including flags and options) and the actual runtime must be included.  (This explicitly introduces a dependence between Martian software and Earthling software, repugnant to the Urbit ethos.)
 
@@ -347,7 +345,7 @@ We also must decide what the target is.  Do we aim for the most portable configu
 
 For instance, suppose that one intended to use the C keyword \texttt{volatile} to block certain common optimizations on a floating-point value.\footnote{In any case, this assumes a legible and enumerable set of behaviors for \texttt{volatile} which is, alas, not the case.  “\texttt{volatile} is a hint to the implementation to avoid aggressive optimization involving the object because the value of the object might be changed by means undetectable by an implementation” \citep[p.~472]{Jones2008}.  “Actions on objects so declared shall not be ‘optimized out’ by an implementation or reordered except as permitted by the rules for evaluating expressions” \citep[p.~1500]{Jones2008}.  “The \texttt{volatile} qualifier only indicates that the value of an object may change in ways unknown to the translator (therefore the quality of generated machine code may be degraded because a translator cannot make use of previous accesses to optimize the current access)” \citep[p.~963]{Jones2008}.  The same author provides examples of C code that is ambiguous in \texttt{volatile}'s semantics, pp.~1290–1291; and undefined in \texttt{volatile}'s semantics, pp.~1482–1483.}  The runtime at the level of Nock does not know if a value is considered floating-point or not.  At the level of a jet, the use of \texttt{volatile} can correctly bar certain hardware optimizations, but these need to be carefully enumerated and understood in the light of the other toolchain concerns enumerated in this section.  Strictly speaking, \texttt{volatile} only seeks to guarantee that stale calculations are not inadvertently reused due to optimization.  Without hardware optimization, the utility of an FLU for fast floating-point computations is questionable.  The risk of a jet mismatch remains high, as does a nonportable jet.\footnote{“What constitutes an access to an object that has volatile-qualified type is implementation-defined” \citep[p.~1488]{Jones2008}.  “Volatile-qualified objects can also be affected by translator optimizations” \citep[p.~1490]{Jones2008}.  The C novice may at this point wonder what the intended utility of \texttt{volatile} in fact is:  “[a] \texttt{volatile} declaration may be used to describe an object corresponding to a memory-mapped input/output port or an object accessed by an asynchronously interrupting function” \citep[p.~1499]{Jones2008}.}
 
-Can the C-defined floating-point environment (as supplied by \texttt{fenv.h}) answer to this need?  This affords the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear whether this environmental control portably spans the entire output of floating-point computations.\footnote{“The floating-point environment access and modification is only meaningful when \texttt{\#pragma STDC FENV\_ACCESS} is set to \texttt{ON}.  \ldots{} In practice, few current compilers, such as HP aCC, Oracle Studio, and IBM XL, support the \texttt{\#pragma} explicitly, but most compilers allow meaningful access to the floating-point environment anyway.” \citep{CPPRef}}
+Can the C-defined floating-point environment (as supplied by \texttt{fenv.h}) answer to this need?  This affords the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear whether this environmental control portably spans the entire output of floating-point computations.\footnote{“The floating-point environment access and modification is only meaningful when \texttt{\#pragma STDC FENV\_ACCESS} is set to \texttt{ON}.  \ldots{} In practice, few current compilers, such as HP aCC, Oracle Studio, and IBM XL, support the \texttt{\#pragma} explicitly, but most compilers allow meaningful access to the floating-point environment anyway.” \citep{CPPRef}}
 
 Finally, “[a]n implementation is not required to provide a facility for altering the modes for translation-time arithmetic, or for making exception flags from the translation available to the executing program” \citep[p.~200]{Jones2008}.  The information we purport to gain by controlling the stack in the manner above outlined is possibly not even available to the compiler and the runtime executable.
 
@@ -447,7 +445,7 @@ Having identified an appropriate subset of operations, we may imagine that the u
 
 In particular, fused multiply-add operations are subject to reordering by an optimizing compiler.  Avoiding these would require some discipline on the part of the jet developer, since code that does not explicitly \texttt{fma} may yet reduce to it in a compiler pass.  A jetting library would be advantageous in this case.
 
-As an example of a refactoring of IEEE 754 operations for determinism, consider the \texttt{ReproBLAS} project (last update \textasciitilde 2016.2.21).   \texttt{ReproBLAS} seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS \citep{ReproBLAS}.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.\footnote{“Using our default settings, reproducibly summing $n$ floating point types requires approximately $9n$ floating point operations (arithmetic, comparison, and absolute value). In theory, this count can be reduced to 5n using the new "augmented addition" and "maximum magnitude" instructions in the proposed IEEE Floating Point Standard 754-2018.”  \citep{ReproBLAS}}  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around \texttt{-O0}.
+As an example of a refactoring of IEEE 754 operations for determinism, consider the \texttt{ReproBLAS} project (last update \textasciitilde 2016.2.21).   \texttt{ReproBLAS} seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS \citep{ReproBLAS}.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.\footnote{“Using our default settings, reproducibly summing $n$ floating point types requires approximately $9n$ floating point operations (arithmetic, comparison, and absolute value). In theory, this count can be reduced to 5n using the new "augmented addition" and "maximum magnitude" instructions in the proposed IEEE Floating Point Standard 754-2018.”  \citep{ReproBLAS}}  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around \texttt{-O0}.
 
 \paragraph{Proscribe by replacement.}
 

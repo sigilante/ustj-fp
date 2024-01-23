@@ -15,11 +15,11 @@
 %  Arrange subsequent pages:
 \fancyhf{}
 \fancyhead[LE]{{\urbitfont Urbit Systems Technical Journal}}
-\fancyhead[RO]{Floating-Point Arithmetic on Deterministic Systems}
+\fancyhead[RO]{The Desert of the Reals:  Floating-Point Arithmetic on Deterministic Systems}
 \fancyfoot[LE,RO]{\thepage}
 
 %%MANUSCRIPT
-\title{Floating-Point Arithmetic on Deterministic Systems}
+\title{The Desert of the Reals:  Floating-Point Arithmetic on Deterministic Systems}
 \author{N. E. Davis~\patp{lagrev-nocfep} \\ Urbit Foundation}
 \date{}
 
@@ -63,7 +63,7 @@ To summarize, given an abstract description of a floating point system, there ar
 
 Early computer systems with floating-point units chose bespoke but incompatible representations, ultimately leading to the IEEE 754 (primarily architected by William Kahan).  IEEE 754 reconciled considerations from many floating-point implementations across hardware manufacturers into an internally consistent set of fixed-width representations.\footnote{We ignore the decimal representations introduced in IEEE 754-2008, which do not materially change our argument.}  For instance, the 32-bit “single precision” C \texttt{float}/Fortran \texttt{REAL*4} specification denotes particular bit positions as meaningful,
 
-\begin{lstlisting}
+\begin{lstlisting}[style=listingcode]
 SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
 \end{lstlisting}
 
@@ -130,7 +130,7 @@ The machine epsilon, or smallest value discernable from 1.0, is determined by th
 In situations in which floating-point operations may occur in different orders, even the basic guarantee of communitativity breaks.  For instance, in 64-bit FP arithmetic, the following holds true (example in Python):
 
 \lstset{language=Python}
-\begin{lstlisting}
+\begin{lstlisting}[style=listingcode_python]
 In [1]: (1.1-0.3)-0.8
 Out[1]: 0.0
 
@@ -207,14 +207,14 @@ The rounding mode can affect the result of computations, and if other processes 
 
 \section{Urbit's Implementation of IEEE 754}
 
-Urbit implements a subset of IEEE 754 functionality in \texttt{/sys/hoon}, the Hoon language specification.  The Nock operations formally take place on integers.  In practice, we could imagine several ways of implementing such operations:  bitmasking the integers or breaking them apart into three components, for instance.  We take Urbit's implementation of \texttt{@rs} (single-precision \texttt{float}) as representative.\footnote{The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values \texttt{@rq} which are represented in the runtime by a pair of \texttt{double}s.}
+Urbit implements a subset of IEEE 754 functionality in \lstinline[style=inlinecode]{/sys/hoon}, the Hoon language specification.  The Nock operations formally take place on integers.  In practice, we could imagine several ways of implementing such operations:  bitmasking the integers or breaking them apart into three components, for instance.  We take Urbit's implementation of \lstinline[style=inlinecode]{@rs} (single-precision \texttt{float}) as representative.\footnote{The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values \lstinline[style=inlinecode]{@rq} which are represented in the runtime by a pair of \texttt{double}s.}
 
-\texttt{++rs} is a wrapper core to instrument arithmetic arms like \texttt{++add} using the \texttt{++ff} floating-point functionality core.  Ultimately this resolves to breaking out the components (sign, exponent, and significand) into separate numbers for the actual operation.\footnote{The decimal output is produced using the traditional Steele–White Dragon4 algorithm \citep{Steele1991}.  It is worth considering upgrading Hoon from Dragon4 to Errol \citep{Andrysco2016} for speed and accuracy.}
+\lstinline[style=inlinecode]{++rs} is a wrapper core to instrument arithmetic arms like \lstinline[style=inlinecode]{++add} using the \lstinline[style=inlinecode]{++ff} floating-point functionality core.  Ultimately this resolves to breaking out the components (sign, exponent, and significand) into separate numbers for the actual operation.\footnote{The decimal output is produced using the traditional Steele–White Dragon4 algorithm \citep{Steele1991}.  It is worth considering upgrading Hoon from Dragon4 to Errol \citep{Andrysco2016} for speed and accuracy.}
 
-The \texttt{++fn} core offers a generalized interface for a superset of IEEE 754-style floating-point implementations, permitting bit width, precision, bias, and rounding mode to be freely specified.\footnote{In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.}  The actual implementation on \texttt{+\$fn}-typed values is rather dense and features numerous rounding and overflow checks:
+The \lstinline[style=inlinecode]{++fn} core offers a generalized interface for a superset of IEEE 754-style floating-point implementations, permitting bit width, precision, bias, and rounding mode to be freely specified.\footnote{In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.}  The actual implementation on \lstinline[style=inlinecode]{+$fn}-typed values is rather dense and features numerous rounding and overflow checks:
 
 %\lstset{language=Hoon}
-\begin{lstlisting}
+\begin{lstlisting}[style=listingcode]
 ++  add
   |=  [a=[e=@s a=@u] b=[e=@s a=@u] e=?]  ^-  fn
   =+  q=(dif:si e.a e.b)
@@ -237,7 +237,7 @@ The \texttt{++fn} core offers a generalized interface for a superset of IEEE 754
 There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are \emph{jetted}.\footnote{A shorthand for \emph{jet-accelerated code}.}  Thus the actual call in this case will correspond to some C code using the SoftFloat library:\footnote{\texttt{u3} functions are Urbit noun library functions.  The \texttt{sing} union is a union of \texttt{uint32\_t} and SoftFloat \texttt{float32\_t} types.}
 
 \lstset{language=C}
-\begin{lstlisting}
+\begin{lstlisting}[style=listingcode_c]
 u3_noun u3qet_add(u3_atom a, u3_atom b, u3_atom r) {
   union sing c, d, e;
   // set IEEE 754 rounding mode
@@ -321,7 +321,7 @@ We consider each in turn, with its ramifications for a deterministic computing p
 
 \subsection{Hardware-supported floating-point arithmetic}
 
-As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, non-negligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be \emph{prima facie} unviable for deterministic computing.\footnote{Although not of grave consequence, the C language (as of C23) does not implement at least two types specified by IEEE 754-2019 and recent predecessors:  \texttt{binary128} quadruple precision and \texttt{binary256} octuple precision.  While neither are significant losses, we also note that Urbit does not currently support a C-style \texttt{long double} type.  C's \texttt{long double} is 80 bits wide on some common consumer hardware, such as the x86-64 architecture, but is 128 bits wide on the 64-bit ARM architecture.  (The situation is worse for Python, whose \texttt{numpy.float128} type eponymously advertises itself as quadruple precision but is in fact a regular 80-bit \texttt{long double}.)  Some compilers and libraries do support quadruple-precision floating-point mathematics, such as GCC's \texttt{\_\_float128} type.  We note that IEEE 754 80-bit extended-precision could be implemented using the \texttt{++fn} core should demand arise.}
+As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, non-negligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be \emph{prima facie} unviable for deterministic computing.\footnote{Although not of grave consequence, the C language (as of C23) does not implement at least two types specified by IEEE 754-2019 and recent predecessors:  \texttt{binary128} quadruple precision and \texttt{binary256} octuple precision.  While neither are significant losses, we also note that Urbit does not currently support a C-style \texttt{long double} type.  C's \texttt{long double} is 80 bits wide on some common consumer hardware, such as the x86-64 architecture, but is 128 bits wide on the 64-bit ARM architecture.  (The situation is worse for Python, whose \texttt{numpy.float128} type eponymously advertises itself as quadruple precision but is in fact a regular 80-bit \texttt{long double}.)  Some compilers and libraries do support quadruple-precision floating-point mathematics, such as GCC's \texttt{\_\_float128} type.  We note that IEEE 754 80-bit extended-precision could be implemented using the \lstinline[style=inlinecode]{++fn} core should demand arise.}
 
 We do not know the field of possible future hardware architectures which Nock as a deterministic computing platform may be called upon to execute.  Jet-accelerated code should be intelligently robust about its the hardware, but Hoon and Nock code should be completely agnostic to the hardware.
 
@@ -410,7 +410,7 @@ What if Urbit treated a call that had a floating-point computation as if it were
   \item  The storage of every result of every floating-point computation could become prohibitively large.  Work on large matrices in numerical analysis or machine learning could rapidly balloon the event log since every intermediate state would also become part of the ship's immutable history.
 \end{enumerate}
 
-To the first objection, we can point to the current design pattern utilized in scrying (or the request for values from the bound scry namespace).  Local scry values (such as values exposed by a system service or vane) are accessed synchronously using the \texttt{\string.\string^} dotket operator.  This is straightforward and easy to integrate into a program.  Remote scry values must be requested asynchronously from another ship, and return at an indeterminate future time as \texttt{gift}s to be processed in another part of the vane or application.
+To the first objection, we can point to the current design pattern utilized in scrying (or the request for values from the bound scry namespace).  Local scry values (such as values exposed by a system service or vane) are accessed synchronously using the \lstinline[style=inlinecode]{.^} dotket operator.  This is straightforward and easy to integrate into a program.  Remote scry values must be requested asynchronously from another ship, and return at an indeterminate future time as \lstinline[style=inlinecode]{gift}s to be processed in another part of the vane or application.
 
 To the second, we observe that although Urbit is a state machine whose history is part of its state, in practice we can mitigate event log growth by either \emph{chopping} the event log by storing its state and permitting replay forward from that point or \emph{tombstoning} data which should never be available again.\footnote{The memory implications of these are not necessary here, but take place in different arenas:  the runtime versus the Arvo noun arena.}
 
@@ -425,7 +425,7 @@ Instead of repeating computations that have been made in the past, what if we ca
 A recently proposed hardware acceleration technique is to store the results of previous multiplication and division operations in a cache, reusing rather than recalculating the result whenever possible. (Dynamic profiling has found that a high percentage of these operations share the same operands as previous operations.)  \citep[p.~1148]{Jones2008}\footnote{Cf. Jones' citation of \citeauthor{Citron1998}} %no period for et al.
 \end{quote}
 
-On Urbit, this introduces an $O(1)$ average-case/$O(n)$ worst-case cache lookup from a MurmurHash3 hash key calculation (what Urbit calls a \texttt{++mug}).  This must be weighed against the floating-point algorithm in consideration, as well as what is actually hashed (likely the Nock of the calculation contained in the dynamic hint).
+On Urbit, this introduces an $O(1)$ average-case/$O(n)$ worst-case cache lookup from a MurmurHash3 hash key calculation (what Urbit calls a \lstinline[style=inlinecode]{++mug}).  This must be weighed against the floating-point algorithm in consideration, as well as what is actually hashed (likely the Nock of the calculation contained in the dynamic hint).
 
 This bears some similarities to aspects of the network call suggestion above, in that the second objection to that one holds here.  Event log and state bloat (via the cache) are liabilities.  Such a cache would be a feature of the Arvo instance, not the runtime VM.  Unlike a truncated event log, the cache must be a permanent feature of the ship's state rather than a convenience.
 
@@ -495,18 +495,18 @@ Jet mismatches have been rare in the current era.\footnote{By “current era”,
 Lagoon\footnote{Linear AlGebra in hOON} is an Urbit library to facilitate Hoon-native mathematical operations.  It envisions six native types,
 
 \begin{enumerate}
-  \item  \texttt{\%real}, an IEEE 754 floating-point value
-  \item  \texttt{\%uint}, an unsigned integer
-  \item  \texttt{\%int2}, a twos-complement signed integer
-  \item  \texttt{\%cplx}, a BLAS-compatible ordered pair
-  \item  \texttt{\%unum}, a unum/posit value
-  \item  \texttt{\%fixp}, a fixed-precision value
+  \item  \lstinline[style=inlinecode]{%real}, an IEEE 754 floating-point value
+  \item  \lstinline[style=inlinecode]{%uint}, an unsigned integer
+  \item  \lstinline[style=inlinecode]{%int2}, a twos-complement signed integer
+  \item  \lstinline[style=inlinecode]{%cplx}, a BLAS-compatible ordered pair
+  \item  \lstinline[style=inlinecode]{%unum}, a unum/posit value
+  \item  \lstinline[style=inlinecode]{%fixp}, a fixed-precision value
 \end{enumerate}
 
 \noindent
-for which \texttt{\%real} allows the rounding mode to be specified; \texttt{\%cplx} consists of a pair of two values, real and imaginary parts; and \texttt{\%fixp} requires an additional metadata statement of the expected precision.
+for which \lstinline[style=inlinecode]{%real} allows the rounding mode to be specified; \lstinline[style=inlinecode]{%cplx} consists of a pair of two values, real and imaginary parts; and \lstinline[style=inlinecode]{%fixp} requires the expected precision.
 
-Lagoon implements algorithmically correct reference implementation in Hoon with the expectation that \texttt{/lib/lagoon} will be jetted.  Operations include basic arithmetic, vector and matrix row/column operations, matrix multiplication, and matrix inversion.  The jetting scheme may take advantage of software libraries or appropriate hardware, but must hew to the dictum that “if it's not deterministic, it isn't real.”\footnote{It is a worth a final digression to address reproducibility on parallel systems.  We do not consider this a design goal for Lagoon at the current time, since Urbit is inherently single-threaded.  Operations like reduction must take place on a single computer; while jets may in principle utilize parallelism their points of entry and exit are unique.  However, we note that the \texttt{ReproBLAS} project has addressed this issue in the context of reproducible parallelism \citep{ReproBLAS}, as has \citeauthor{Chohra2016}}  % no period for et al.
+Lagoon implements algorithmically correct reference implementation in Hoon with the expectation that \lstinline[style=inlinecode]{/lib/lagoon} will be jetted.  Operations include basic arithmetic, vector and matrix row/column operations, matrix multiplication, and matrix inversion.  The jetting scheme may take advantage of software libraries or appropriate hardware, but must hew to the dictum that “if it's not deterministic, it isn't real.”\footnote{It is a worth a final digression to address reproducibility on parallel systems.  We do not consider this a design goal for Lagoon at the current time, since Urbit is inherently single-threaded.  Operations like reduction must take place on a single computer; while jets may in principle utilize parallelism their points of entry and exit are unique.  However, we note that the \texttt{ReproBLAS} project has addressed this issue in the context of reproducible parallelism \citep{ReproBLAS}, as has \citeauthor{Chohra2016}}  % no period for et al.
 
 Lagoon has passed through several implementations and remains in active development.  The current implementation is the \texttt{lagoon} branch of the \texttt{urbit/urbit} repository \citep{Urbit}.
 
@@ -524,7 +524,7 @@ To summarize, the most promising solutions for floating-point mathematics on Urb
   \item  Replacing IEEE 754 with another approach of sufficient speed, fixed-point and unum/posits chief among these.
 \end{enumerate}
 
-Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.\footnote{UWasm or UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved); \texttt{lazytrig}, which is slow and implemented purely in Hoon (Nock); Lagoon, which includes IEEE 754 operations with its linear algebra library (\emph{q.v.}); and Lora.}  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics.
+Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.\footnote{UWasm or UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved); \texttt{lazytrig}, which is slow and implemented purely in Hoon (Nock); Lagoon, which includes IEEE 754 operations with its linear algebra library (\emph{q.v.}); and MNIST.}  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics.
 
 \bibliographystyle{plainnat}
 \bibliography{ustj-fp}

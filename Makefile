@@ -1,12 +1,12 @@
 # KnowhutImean?
 TARGET = mss
-BIBFILE = ustj-fp
+BIBFILE = mss
 
 all: $(TARGET).pdf
 
 $(TARGET).pdf: $(TARGET).tex $(BIBFILE).bib
 	xelatex -interaction=nonstopmode $(TARGET)
-	bibtex $(TARGET)
+	/usr/bin/biber $(TARGET)
 	xelatex -interaction=nonstopmode $(TARGET)
 	xelatex -interaction=nonstopmode $(TARGET)
 

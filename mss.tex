@@ -46,7 +46,7 @@ Early numeric computing tended to focus on problems of interest to military and 
 
 On the other hand, deterministic computing describes the ability for a given computation be reproducible exactly.  Such reproducibility permits referential transparency and more powerful reasoning about a program's results and dependencies.  This includes, for Urbit as a state machine, that the event log replay be portable across platforms to yield the same result.  Conceptual guarantees must be backstopped by actual implementation guarantees for determinism to hold.
 
-\section{The Field of the Reals}
+\section{A Derivation of the Real Numbers}
 
 Binary computer values are at root easily represented as non-negative integers.  However, it is frequently convenient when working with human applications to either use other numeric bases (notably decimal and hexadecimal) or to permit non-integer mathematics.
 
@@ -526,6 +526,5 @@ To summarize, the most promising solutions for floating-point mathematics on Urb
 
 Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.\footnote{UWasm or UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved); \texttt{lazytrig}, which is slow and implemented purely in Hoon (Nock); Lagoon, which includes IEEE 754 operations with its linear algebra library (\emph{q.v.}); and MNIST.}  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics.
 
-\bibliographystyle{plainnat}
-\bibliography{ustj-fp}
+\printbibliography
 \end{document}

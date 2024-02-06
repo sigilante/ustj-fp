@@ -1,1 +1,151 @@
-../ustj.sty
+\ProvidesPackage{ustj}
+
+\usepackage[T1]{fontenc}
+%\usepackage[utf8]{inputenc}
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\usepackage{fontspec}
+\setmainfont{Linux Libertine O}
+\newfontfamily\monofont{Urbit Sans Mono TT SemiBold}[Scale=MatchLowercase]
+\renewcommand{\setmonofont}{\monofont}
+\renewcommand{\texttt}[1]{{\monofont #1}}
+
+\usepackage{listings}
+\usepackage[dvipsnames]{xcolor}
+\lstdefinelanguage{Hoon}
+{
+  alsoletter={
+    ~!@\#\$\%^&*-_=+:;<>\,.?/|`"'\\
+  },
+  keywords={
+    |_, |\%, |@, |:, |., |-, |^, |~, |*, |=, |?, |\$,
+    \$@, \$_, \$:, \$\%, \$<, \$>, \$|, \$\&, \$^, \$~, \$-, \$=, \$?, \$;,
+    \%_, \%., \%^, \%+, \%-, \%:, \%~, \%*, \%=,
+    :_, :^, :+, :-, :~, :*,
+    .+, .*, .=, .?, .^,
+    --, ==,
+    ^|, ^., ^-, ^+, ^\&, ^~, ^=, ^?, ^*, ^:,
+    ~|, ~\$, ~_, ~\%, ~/, ~<, ~>, ~+, ~\&, ~?, ~=, ~!,
+    ;:, ;/, ;<, ;~, ;;, ;+, ;*, ;=,
+    =|, =., =?, =^, =:, =/, =;, =<, =>, =-, =*, =\,, =+, =~,
+    ?|, ?:, ?., ?<, ?>, ?-, ?^, ?=, ?\#, ?+, ?\&, ?@, ?~, ?!,
+    !:, !., !\,, !;, !>, !<, !@, !=, !?, !!,
+    /?, /-, /+, /=, /\%, /\$, /*,
+    +|, +\$, ++, +*,
+  },
+  morekeywords={
+    @, @c, @d, @da, @dr, @f, @i, @if, @is, @n, @p, @q, @r, @rh, @rs, @rd, @rq, @s, @sb, @sd, @sv, @sw, @sx, @t, @ta, @tas, @u, @ub, @uc, @ud, @uv, @uw, @ux
+    unit, cord, arch, tape, list, map, set
+  },
+  sensitive=true,
+  morecomment=[l]{::},
+  morestring=[b]",
+  morestring=[d]'
+}
+\lstdefinestyle{inlinecode}{
+    language=Hoon,
+    basicstyle=\setmonofont,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    breaklines=true,
+    breakatwhitespace=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
+\lstdefinestyle{listingcode}{
+    language=Hoon,
+    basicstyle=\setmonofont\small,
+    numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
+    frame=tb,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
+\lstdefinestyle{listingcode_python}{
+    language=Python,
+    basicstyle=\setmonofont\small,
+    numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
+    frame=tb,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
+\lstdefinestyle{listingcode_c}{
+    language=C,
+    basicstyle=\setmonofont\small,
+    numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
+    frame=tb,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
+
+
+\usepackage{titlesec}
+\newfontfamily\urbitfont{Urbit Sans TT SemiBold}
+\titleformat{\section}{\urbitfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\urbitfont\Large\bfseries}{\thesubsection}{1em}{}
+\usepackage{titling}
+\renewcommand{\maketitlehooka}{\urbitfont\bfseries}
+
+%% Page size
+\usepackage[paperheight=8.5in,paperwidth=5.5in,margin=1in,heightrounded,showframe]{geometry}
+
+%% Configure first-page footer and later-page header.
+\usepackage{fancyhdr}
+
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+
+\newcommand{\patp}[1]{\texttt{\textasciitilde #1}}
+\newcommand{\github}[1]{\texttt{@#1}}
+
+% Turn off when producing release version.
+\usepackage{lineno}
+\linenumbers
+
+% Bibliography management
+\usepackage[
+    backend=biber,
+    style=authoryear-icomp,
+    sortlocale=en_US,
+    natbib=true,
+    url=false,
+    eprint=false
+]{biblatex}
+%\usepackage{natbib}
+% \usepackage[hyphens]{url}
+% Define a custom citation command for GitHub PRs
+\DeclareCiteCommand{\citetpr}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \printtext[bibhyperref]{\printfield{usera}}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+

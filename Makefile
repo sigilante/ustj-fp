@@ -11,6 +11,6 @@ $(TARGET).pdf: $(TARGET).tex $(BIBFILE).bib
 	xelatex -interaction=nonstopmode $(TARGET)
 
 clean:
-	rm -f $(TARGET).pdf *.aux *.bbl *.blg *.log *.out *.toc
+	rm -f $(TARGET).pdf *.aux *.bbl *.blg *.log *.out *.toc *.bcf *run.xml
 
 .PHONY: all clean

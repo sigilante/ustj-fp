@@ -1,0 +1,28 @@
+
+<H1><A ID="SECTION00040000000000000000">
+Urbit's Implementation of IEEE 754</A>
+</H1>
+
+<P>
+Urbit implements a subset of IEEE 754 functionality in <tex2html_verblst_mark>1<tex2html_verb_mark>@rs (single-precision <SPAN  CLASS="texttt">float</SPAN>) as representative.<A ID="tex2html21"
+  HREF="footnode.html#foot142"><SUP><SPAN CLASS="arabic">20</SPAN></SUP></A>s.
+
+<P>
+<tex2html_verblst_mark>3<tex2html_verb_mark>++add using the <tex2html_verblst_mark>4<tex2html_verb_mark>The decimal output is produced using the traditional Steele–White Dragon4 algorithm <#143#>Steele1991<#143#>.  It is worth considering upgrading Hoon from Dragon4 to Errol <#144#>Andrysco2016<#144#> for speed and accuracy.
+
+<P>
+The <tex2html_verblst_mark>5<tex2html_verb_mark>In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.  The actual implementation on <tex2html_verb_mark>7<tex2html_verb_mark>language=Hoon
+<PRE><tex2html_verbatim_mark>lstlisting34#</PRE>
+
+<P>
+There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are <SPAN  CLASS="textit">jetted</SPAN>.<A ID="tex2html22"
+  HREF="footnode.html#foot324"><SUP><SPAN CLASS="arabic">21</SPAN></SUP></A>  Thus the actual call in this case will correspond to some C code using the SoftFloat library:<A ID="tex2html23"
+  HREF="footnode.html#foot325"><SUP><SPAN CLASS="arabic">22</SPAN></SUP></A>
+<P>
+<#153#>language=C<#153#>
+<PRE><tex2html_verbatim_mark>lstlisting35#</PRE>
+
+<P>
+Why SoftFloat?  Enter, stage left, the problem of platform-portable determinism.
+
+<P>

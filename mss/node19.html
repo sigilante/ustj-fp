@@ -1,0 +1,18 @@
+
+<H3><A ID="SECTION00051400000000000000">
+Dock floating-point results</A>
+</H3>
+
+<P>
+What about trimming floating-point values of their least significant bits?  When would this take place—at each step of a multi-step computation?  At the level of single-bit rounding errors, this would potentially work, and amounts to selecting a rounding mode towards even (last digit <SPAN  CLASS="texttt">0</SPAN>).  Accrual across multiple calculations could potentially render this unreliable, particularly if different computational paths are supposed to lead to the same result and do not as a result of docking.
+
+<P>
+One could also envision docking more than the last bit.  This introduces a step to check and adjust the floating-point value, and in addition breaks IEEE 754 compliance—at which point the trouble of trying to reconcile IEEE 754 with determinism fails.
+
+<P>
+In general, we cannot assign a high degree of significance to figures beyond the first few, but accruals across large data sets (such as large language models) can become significant (as attested to by the need for compensated summation).
+
+<P>
+A related technique could pack bits of larger floating-point values into smaller ones, but this is functionally a software-defined solution (see, e.g., <#230#>LeBrun2018<#230#>).
+
+<P>

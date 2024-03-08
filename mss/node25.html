@@ -1,0 +1,23 @@
+
+<H4><A ID="SECTION00055010000000000000">
+Proscribe by sector.</A>
+</H4>
+
+<P>
+One solution to the speed-vs.-reproducibility dilemma is to permit hardware-accelerated IEEE 754 operations, but only in a verified subset permissible for jets.  This would require careful vetting of the hardware stack and compiler options to define a permissible subset of IEEE 754 operations as “known good”.  Coupled with the epoch system, it may be a feasible solution.
+
+<P>
+What degree of vetting will reliably answer the gap between IEEE 754 and hardware implementation for any particular operation?  [pp.~330ff.]<#259#>Jones2008<#259#> and <#260#>Goldberg1991<#260#> provide a careful analysis of accuracy errors inherent to IEEE 754 as a standard, but due to the variety of possible scenarios do not treat of real compilers and chipsets much.<A ID="tex2html39"
+  HREF="footnode.html#foot337"><SUP><SPAN CLASS="arabic">38</SPAN></SUP></A>  Trivially, as demonstrated above in the Python example, <tex2html_verbatim_mark>#math48#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline438#</SPAN>, and even modest reordering of operations by a zealous compiler optimization is susceptible of introducing nonportable and thus nondeterministic (in our sense) behavior.
+
+<P>
+Having identified an appropriate subset of operations, we may imagine that the use of <SPAN  CLASS="texttt">#ifdef</SPAN>, Autotools’ <SPAN  CLASS="texttt">configure</SPAN>, and a jetting library may answer to our need.  Any jet library would have to be carefully constructed to avoid imposing tight discipline directly on the end user (modal Hoon author).  We cannot recommend this path today but do not consider the way to be shut, especially given liberal use of <SPAN  CLASS="texttt">volatile</SPAN>.
+
+<P>
+In particular, fused multiply-add operations are subject to reordering by an optimizing compiler.  Avoiding these would require some discipline on the part of the jet developer, since code that does not explicitly <SPAN  CLASS="texttt">fma</SPAN> may yet reduce to it in a compiler pass.  A jetting library would be advantageous in this case.
+
+<P>
+As an example of a refactoring of IEEE 754 operations for determinism, consider the <SPAN  CLASS="texttt">ReproBLAS</SPAN> project (last update &#126;2016.2.21).   <SPAN  CLASS="texttt">ReproBLAS</SPAN> seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS <#268#>ReproBLAS<#268#>.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.<A ID="tex2html40"
+  HREF="footnode.html#foot338"><SUP><SPAN CLASS="arabic">39</SPAN></SUP></A>  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around <SPAN  CLASS="texttt">-O0</SPAN>.
+
+<P>

@@ -1,0 +1,119 @@
+
+<tex2html_mydb_mark>#1#%  Make first page footer:
+
+<tex2html_mydb_mark>#2#%
+
+<tex2html_mydb_mark>#3#% Clear header/footer
+
+<tex2html_mydb_mark>#4#%  Arrange subsequent pages:
+
+<tex2html_mydb_mark>#5#%%MANUSCRIPT
+
+<tex2html_mydb_mark>#6#% https://www.iso.org/obp/ui/#iso:std:iso-iec:9899:ed-4:v1:en
+
+<tex2html_mydb_mark>#7#% https://www.h-schmidt.net/FloatConverter/IEEE754.html
+
+<tex2html_mydb_mark>#8#% https://people.eecs.berkeley.edu/~wkahan/ieee754status/IEEE754.PDF
+
+<tex2html_mydb_mark>#9#%\footnote{While this particular example may not strike the reader as particularly egregious, the existence of deviations from the specification raises the spectre of nondeterminism.}
+
+<tex2html_mydb_mark>#10#%\lstset{language=Hoon}
+
+<tex2html_mydb_mark>#11#%f ;SPMamp; e.b (^add (lsh [0 (abs:si q)] a.a) a.b)]
+  
+<tex2html_mydb_mark>#12#%+  dif:si  e.a  %-  sun:si
+    
+<tex2html_mydb_mark>#13#%+  sum:si  e.b  (sun:si mb)
+  
+<tex2html_mydb_mark>#14#%z  (lug %fl a ;SPMamp;)  %d  (lug %fl a ;SPMamp;)
+      
+<tex2html_mydb_mark>#15#%a  (lug %lg a ;SPMamp;)  %u  (lug %lg a ;SPMamp;)
+      
+<tex2html_mydb_mark>#16#%n  (lug %na a ;SPMamp;)
+    
+<tex2html_mydb_mark>#17#% Conversion between bases – such as _printf(“%1.8e”);_ – is not guaranteed to be identical across all implementations. Doing perfect conversions efficiently was an unsolved problem when the original IEEE standard came out and while it has since been solved this doesn’t mean that everybody does correctly rounded printing
+
+<tex2html_mydb_mark>#18#% TODO refer to https://hashingit.com/elements/research-resources/2006-01-improving_software_floating_point_support.pdf
+
+<tex2html_mydb_mark>#19#%no period for et al.
+
+<tex2html_mydb_mark>#20#% https://www.crcpress.com/The-End-of-Error-Unum-Computing/Gustafson/p/book/9781482239867
+
+<tex2html_mydb_mark>#21#% http://superfri.org/superfri/article/download/137/232
+
+<tex2html_mydb_mark>#22#% https://posithub.org/docs/posit_standard-2.pdf
+
+<tex2html_mydb_mark>#23#% https://www.vts.su.ac.rs/data/files/1/uploads/sip2016/proceedings/10_Risse_SIP2016.pdf
+
+<tex2html_mydb_mark>#24#%real}, an IEEE 754 floating-point value
+  
+<tex2html_mydb_mark>#25#%uint}, an unsigned integer
+  
+<tex2html_mydb_mark>#26#%int2}, a twos-complement signed integer
+  
+<tex2html_mydb_mark>#27#%cplx}, a BLAS-compatible ordered pair
+  
+<tex2html_mydb_mark>#28#%unum}, a unum/posit value
+  
+<tex2html_mydb_mark>#29#%fixp}, a fixed-precision value
+
+<tex2html_mydb_mark>#30#%real} allows the rounding mode to be specified; \lstinline[style=inlinecode]{%cplx} consists of a pair of two values, real and imaginary parts; and \lstinline[style=inlinecode]{%fixp} requires the expected precision.
+
+<tex2html_mydb_mark>#31#% no period for et al.
+
+<tex2html_mydb_mark>#32#[style=listingcode]
+SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
+<tex2html_mydb_mark>#33#[style=listingcode_python]
+In [1]: (1.1-0.3)-0.8
+Out[1]: 0.0
+
+In [2]: (1.1-0.8)-0.3
+Out[2]: 5.551115123125783e-17
+<tex2html_mydb_mark>#34#[style=listingcode]
+++  add
+  |=  [a=[e=@s a=@u] b=[e=@s a=@u] e=?]  ^-  fn
+  =+  q=(dif:si e.a e.b)
+  |-  ?.  (syn:si q)  $(b a, a b, q +(q))
+  ?:  e
+    [%f ;SPMamp; e.b (^add (lsh [0 (abs:si q)] a.a) a.b)]
+  =+  [ma=(met 0 a.a) mb=(met 0 a.b)]
+  =+  ^=  w  %+  dif:si  e.a  %-  sun:si
+    ?:  (gth prc ma)  (^sub prc ma)  0
+  =+  ^=  x  %+  sum:si  e.b  (sun:si mb)
+  ?:  =((cmp:si w x) --1)
+    ?-  r
+      %z  (lug %fl a ;SPMamp;)  %d  (lug %fl a ;SPMamp;)
+      %a  (lug %lg a ;SPMamp;)  %u  (lug %lg a ;SPMamp;)
+      %n  (lug %na a ;SPMamp;)
+    ==
+  (rou [e.b (^add (lsh [0 (abs:si q)] a.a) a.b)])
+<tex2html_mydb_mark>#35#[style=listingcode_c]
+u3_noun u3qet_add(u3_atom a, u3_atom b, u3_atom r) {
+  union sing c, d, e;
+  // set IEEE 754 rounding mode
+  _set_rounding(r);
+  // unwrap nouns into C-typed values
+  c.c = u3r_word(0, a);
+  d.c = u3r_word(0, b);
+  // perform addition and unify NaN
+  e.s = _nan_unify(f32_add(c.s, d.s));
+
+  // wrap C value back into noun
+  return u3i_words(1, ;SPMamp;e.c);
+}
+<tex2html_mydb_mark>#36#
+#include ;SPMlt;stdio.h;SPMgt;
+
+extern double a, b;
+
+void f(void) {
+    double x;
+    x = a + b;
+    if (x != a + b)
+        printf(;SPMquot;x != a + b\n;SPMquot;);
+}
+<tex2html_mydb_mark>#49#<!-- MATH
+ \begin{displaymath}
+(-1)^{\mathtt{S}} \times 2^{\mathtt{E}-127} \times 1.\mathtt{F}
+\end{displaymath}
+ -->

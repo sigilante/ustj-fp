@@ -1,0 +1,32 @@
+
+<H2><A ID="SECTION00053000000000000000">
+Opaque calculations</A>
+</H2>
+
+<P>
+When a request for data is made over the network, one is not certain what the resulting data will be.  Their value is epistemically opaque.  In Urbit's event log, the results of network calls are persisted as effects in the modified state (for successful events).
+
+<P>
+What if Urbit treated a call that had a floating-point computation as if it were a network call, that is, as if it were a referentially opaque injection into Urbit's state?  One difference is that network calls result as side effects from hints to the runtime which then handles the plumbing, as it were, and injects the resulting <SPAN  CLASS="texttt">gift</SPAN> task back into Arvo as if a <SPAN  CLASS="textit">deus ex machina</SPAN>, from Arvo's perspective.  (It should of course know how to handle such a contingency.)  There are two main objections that can be made here:
+
+<P>
+
+<OL>
+<LI>From the programmer's standpoint, every floating-point computation would need to be bundled as if it were a network call, and the result treated as if it were a new move passed back into the kernel.  This destroys synchronicity and changes floating-point computations from lightweight programmer choices into heavy and occasional calls.
+
+<P>
+</LI>
+<LI>The storage of every result of every floating-point computation could become prohibitively large.  Work on large matrices in numerical analysis or machine learning could rapidly balloon the event log since every intermediate state would also become part of the ship's immutable history.
+</LI>
+</OL>
+
+<P>
+To the first objection, we can point to the current design pattern utilized in scrying (or the request for values from the bound scry namespace).  Local scry values (such as values exposed by a system service or vane) are accessed synchronously using the <tex2html_verblst_mark>9<tex2html_verb_mark>gifts to be processed in another part of the vane or application.
+
+<P>
+To the second, we observe that although Urbit is a state machine whose history is part of its state, in practice we can mitigate event log growth by either <SPAN  CLASS="textit">chopping</SPAN> the event log by storing its state and permitting replay forward from that point or <SPAN  CLASS="textit">tombstoning</SPAN> data which should never be available again.<A ID="tex2html36"
+  HREF="footnode.html#foot249"><SUP><SPAN CLASS="arabic">35</SPAN></SUP></A>
+<P>
+In this proposal, however, one could imagine a situation like that which obtains in scrying:  fast software implementation treated synchronously, slow hardware acceleration treated asynchronously.
+
+<P>

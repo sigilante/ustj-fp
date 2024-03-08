@@ -1,0 +1,45 @@
+
+<H4><A ID="SECTION00031030000000000000">
+Sequence ordering.</A>
+</H4>
+
+<P>
+In situations in which floating-point operations may occur in different orders, even the basic guarantee of communitativity breaks.  For instance, in 64-bit FP arithmetic, the following holds true (example in Python):
+
+<P>
+<#111#>language=Python<#111#>
+<PRE><tex2html_verbatim_mark>lstlisting33#</PRE>
+
+<P>
+
+This occurs since operations of different magnitude can affect the resulting significand, a sort of horizon of resolution leading to differences in the outcome.  Sequence order can be changed (and thus commutativity broken) as a result of many common programmer design patterns, including compiler optimizations, race conditions, and parallelization.
+
+<P>
+Another problem in numerical analysis, error accrual is likewise due to the horizon of resolution.  The accrual of error due to summing sequences of numbers (whether in parallel or serially) occurs in the summation of sequences of numbers since the error term can grow as <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline392#</SPAN>.  Kahan–Babuška compensated summation can be used to track a separate error term (<SPAN  CLASS="textit">de facto</SPAN> extending the precision during the operations) and adding it back in to the sum before yielding the final result <#115#>Kahan1965,Babuska1969<#115#>.
+
+<P>
+Formally neither associative nor commutative for the above reasons, floating-point arithmetic can break our mathematical intuitions in interesting ways.  However, this is a consistent and well-understood phenomenon.  For our purposes as designers of deterministic computers, the most damning indictment has to do not with IEEE 754 itself but with manufacturer deviation in hardware implementation.  In 1997, William Kahan himself complained (justly) about the compromises inherent in the standard for compiler implementers:
+
+<P>
+<BLOCKQUOTE>
+Most computer linguists find floating-point arithmetic too disruptive [due to] [t]heir predilection for “referential transparency” ….  Computer linguists also dislike functions with side-effects and functions affected by implicit variables not explicit in argument lists. But floating-point operations can raise IEEE 754 exception flags as side-effects, and operations are affected implicitly by exception-handling and rounding modes eligible at run-time according to IEEE 754. Alas, that standard omitted to bind flags and modes to locutions in standard programming languages, and this omission grants computer linguists a licence for inaction.  <#117#>Kahan1997<#117#>
+
+</BLOCKQUOTE>
+
+<P>
+There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):<A ID="tex2html16"
+  HREF="footnode.html#foot321"><SUP><SPAN CLASS="arabic">15</SPAN></SUP></A>
+<P>
+
+<OL>
+<LI>Optional, discretionary, or advisory aspects.
+</LI>
+<LI>Gaps or omissions in the specification.
+</LI>
+<LI>Failure to implement the specification exactly.
+</LI>
+<LI>Out-of-sequence computations.
+</LI>
+</OL>
+
+<P>

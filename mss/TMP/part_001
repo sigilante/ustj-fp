@@ -1,0 +1,446 @@
+\documentclass[twoside]<<1>>article<<1>>
+\begin<<460>>tex2html_deferred<<460>>\par\end<<461>>tex2html_deferred<<461>>
+\usepackage<<2>>ustj<<2>>
+\begin<<462>>tex2html_deferred<<462>>\par\end<<463>>tex2html_deferred<<463>>
+\addbibresource<<3>>mss.bib<<3>>
+\begin<<464>>tex2html_deferred<<464>>\par\end<<465>>tex2html_deferred<<465>>
+\fancypagestyle<<4>>firststyle<<4>><<345>><tex2html_comment_mark>2
+\fancyhf<<5>><<5>><tex2html_comment_mark>3
+\fancyhead<<6>><<6>>
+\fancyfoot[L]<<344>><<309>>\begin<<466>>tex2html_deferred<<466>>\footnotesize\end<<467>>tex2html_deferred<<467>>
+              Manuscript submitted for review.\\ 
+              ~ \\ 
+              Address author correspondence to \patp<<7>>lagrev-nocfep<<7>>.
+              <<309>><<344>>
+<<345>>
+\fancyhf<<8>><<8>>
+\fancyhead[LE]<<310>><<9>>\urbitfont Urbit Systems Technical Journal<<9>><<310>>
+\fancyhead[RO]<<10>>Floating-Point Arithmetic on Deterministic Systems<<10>>
+\fancyfoot[LE,RO]<<11>>\begin<<468>>tex2html_deferred<<468>>\thepage\end<<469>>tex2html_deferred<<469>><<11>>
+\begin<<470>>tex2html_deferred<<470>>\par\end<<471>>tex2html_deferred<<471>>
+\title<<12>>The Desert of the Reals:  Floating-Point Arithmetic on Deterministic Systems<<12>>
+\begin<<472>>tex2html_deferred<<472>>\author<<311>>N. E. Davis~\patp<<13>>lagrev-nocfep<<13>> \\  Urbit Foundation<<311>>\end<<473>>tex2html_deferred<<473>>
+\date<<14>><<14>>
+\begin<<474>>tex2html_deferred<<474>>\par\end<<475>>tex2html_deferred<<475>>
+\begin<<15>>document<<15>>
+\begin<<476>>tex2html_deferred<<476>>\par\end<<477>>tex2html_deferred<<477>>
+\maketitle
+\thispagestyle<<16>>firststyle<<16>>
+\begin<<478>>tex2html_deferred<<478>>\par\end<<479>>tex2html_deferred<<479>>
+\begin<<17>>abstract<<17>>
+Floating-point calculations are critical to a number of special domains in modern computing, including machine learning, graphics, and scientific computing.  Numerical calculations are particularly susceptible to opaque and system-local optimizations, which can break certain guarantees for deterministic computers.  We consider the background and implementation of IEEE 754 floating-point arithmetic and options for implementing mathematics compatibly with fully reproducible and portable computing.  We consider hardware-based and software-based proposals.
+\end<<18>>abstract<<18>>
+\begin<<480>>tex2html_deferred<<480>>\par\end<<481>>tex2html_deferred<<481>>
+\begin<<482>>tex2html_deferred<<482>>\tableofcontents\end<<483>>tex2html_deferred<<483>>
+\begin<<484>>tex2html_deferred<<484>>\par\end<<485>>tex2html_deferred<<485>>
+\section<<19>>Introduction<<19>>
+\begin<<486>>tex2html_deferred<<486>>\par\end<<487>>tex2html_deferred<<487>>
+\begin<<20>>quote<<20>>
+Floating-point operations are a technically complex subject and the extent to which developers or source code alter or test this information will depend on many factors. Apart from the general exhortation to developers to be careful and to make sure they know what they are doing, there is little of practical use that can be recommended.  \citep[p.~197]<<21>>Jones2008<<21>>
+\end<<22>>quote<<22>>
+\begin<<488>>tex2html_deferred<<488>>\par\end<<489>>tex2html_deferred<<489>>
+Modern digital computers deal, at their root, in binary representation, entirely zeros and ones.\begin<<490>>tex2html_deferred<<490>>\footnote<<23>>Analog computers may operate on a continuum of value.  Computer logic systems may be architected on other numeric bases for their logic, such as the 1837 Analytical Engine's decimal system and the 1958 Setun's (Сетунь) ternary system.<<23>>\end<<491>>tex2html_deferred<<491>>  These are often formally considered to be whole numbers in a number base of two.  However, numerical calculations very frequently require the use of numbers with a fractional part to adequately represent the elements of a computation.
+\begin<<492>>tex2html_deferred<<492>>\par\end<<493>>tex2html_deferred<<493>>
+Early numeric computing tended to focus on problems of interest to military and national security applications, such as partial differential equations and numerical optimization.  Such calculations typically involve arrays, and linear algebra was elaborated hand-in-hand with digital computing techniques in software and hardware.  Numerics assumed prominence for a wider audience with the rise of gaming on personal computers, although these algorithms emphasized speed over exactness.\begin<<494>>tex2html_deferred<<494>>\footnote<<24>>This is reflected in algorithms such as the “fast inverse square root”, which permits a degree of inaccuracy in exchange for a substantial speedup.<<24>>\end<<495>>tex2html_deferred<<495>>  To this point in the history of computing, most software either ran on a single platform for its lifetime (as with supercomputing) or did not require portably deterministic algorithms (as with gaming).\begin<<496>>tex2html_deferred<<496>>\footnote<<25>>To be clear, 3D gaming algorithms are deterministic (assuming no random sources are used), but exact error values are often not reproducible across platforms, nor was such portability a design criterion.  The reasons for this are discussed below.<<25>>\end<<497>>tex2html_deferred<<497>>
+\begin<<498>>tex2html_deferred<<498>>\par\end<<499>>tex2html_deferred<<499>>
+On the other hand, deterministic computing describes the ability for a given computation be reproducible exactly.  Such reproducibility permits referential transparency and more powerful reasoning about a program's results and dependencies.  This includes, for Urbit as a state machine, that the event log replay be portable across platforms to yield the same result.  Conceptual guarantees must be backstopped by actual implementation guarantees for determinism to hold.
+\begin<<500>>tex2html_deferred<<500>>\par\end<<501>>tex2html_deferred<<501>>
+\section<<26>>A Derivation of the Real Numbers<<26>>
+\begin<<502>>tex2html_deferred<<502>>\par\end<<503>>tex2html_deferred<<503>>
+Binary computer values are at root easily represented as non-negative integers.  However, it is frequently convenient when working with human applications to either use other numeric bases (notably decimal and hexadecimal) or to permit non-integer mathematics.
+\begin<<504>>tex2html_deferred<<504>>\par\end<<505>>tex2html_deferred<<505>>
+In the historical development of mathematics, logical problems in each set of numbers drove the discovery and elaboration of more elaborate algebras.  For instance, in the field of natural numbers \begin<<346>>tex2html_wrap_inline<<346>>$\mathbb<<27>>N<<27>>$\end<<347>>tex2html_wrap_inline<<347>>, the operation of addition (\begin<<348>>tex2html_wrap_inline<<348>>$+$\end<<349>>tex2html_wrap_inline<<349>>) or multiplication (\begin<<350>>tex2html_wrap_inline<<350>>$\times$\end<<351>>tex2html_wrap_inline<<351>>) produces a value within the set; however, permitting subtraction (\begin<<352>>tex2html_wrap_inline<<352>>$-$\end<<353>>tex2html_wrap_inline<<353>>) of a larger number from a smaller number can result in a value inexpressible in \begin<<354>>tex2html_wrap_inline<<354>>$\mathbb<<28>>N<<28>>$\end<<355>>tex2html_wrap_inline<<355>>.  This motivated the introduction of the integers \begin<<356>>tex2html_wrap_inline<<356>>$\mathbb<<29>>Z<<29>>$\end<<357>>tex2html_wrap_inline<<357>>, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division (\begin<<358>>tex2html_wrap_inline<<358>>$/$\end<<359>>tex2html_wrap_inline<<359>>) similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean\begin<<506>>tex2html_deferred<<506>>\footnote<<30>>A legendary attribution, alas, predicated on the Pythagorean discovery of the irrational numbers as a separate class thereby inducing a crisis.  https://plato.stanford.edu/entries/pythagoras/<<30>>\end<<507>>tex2html_deferred<<507>> innovation of the rational numbers or fractions as a class \begin<<360>>tex2html_wrap_inline<<360>>$\mathbb<<31>>Q<<31>>$\end<<361>>tex2html_wrap_inline<<361>>.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the set of real numbers.  The set of real numbers, denoted by \begin<<362>>tex2html_wrap_inline<<362>>$\mathbb<<32>>R<<32>>$\end<<363>>tex2html_wrap_inline<<363>>, is characterized by its continuity, implying that for any two distinct values within this set, there exists a difference, no matter how small.
+\begin<<508>>tex2html_deferred<<508>>\par\end<<509>>tex2html_deferred<<509>>
+Since the operations and conventions of \begin<<364>>tex2html_wrap_inline<<364>>$\mathbb<<33>>R<<33>>$\end<<365>>tex2html_wrap_inline<<365>>\space have been found to be so useful, it is desirable to extend the semantics to computer programming.  However, digital computers, by virtue of their binary representation, effectively use natural numbers \begin<<366>>tex2html_wrap_inline<<366>>$\mathbb<<34>>N<<34>>$\end<<367>>tex2html_wrap_inline<<367>>\space to represent numbers (to the limit of memory rather than positive infinity \begin<<368>>tex2html_wrap_inline<<368>>$+\infty$\end<<369>>tex2html_wrap_inline<<369>>).  Several schemes permit a computer integer to be interpreted as if it were a number with a fractional part, including a scaling factor, fixed-point representation,\begin<<510>>tex2html_deferred<<510>>\footnote<<312>>Hand-in-hand with the development of linear algebra, machines such as ENIAC and MANIAC were employed in the 1940s for solving thermonuclear reaction calculations and neutron diffusion equations.  Under the direction of John von Neumann, it appears that some calculations did experimentally involve a floating-point scheme, although this was later rejected definitively in favor of fixed-point arithmetic.  \citep[p.~3]<<35>>Kahan1997a<<35>><<312>>\end<<511>>tex2html_deferred<<511>> and floating-point representations.
+\begin<<512>>tex2html_deferred<<512>>\par\end<<513>>tex2html_deferred<<513>>
+The basic concept of floating point arithmetic is that it permits the representation of a discrete subset of \begin<<370>>tex2html_wrap_inline<<370>>$\mathbb<<36>>R<<36>>$\end<<371>>tex2html_wrap_inline<<371>>\space by composing a significand, a base, and an exponent.  The significand is the set of significant digits, possibly including the sign; the base is the understood number base (typically 2); and the exponent is the power to which that base is put before multiplying by the significand to yield the result.\begin<<514>>tex2html_deferred<<514>>\footnote<<313>>Compare so-called “engineering” notation, such as \texttt<<37>>1e5<<37>> for 10,000, which compactly represents the significand 1 and the exponent 5 with an understood base of 10 indicated by \texttt<<38>>e<<38>> and a sign, implicit for positive.<<313>>\end<<515>>tex2html_deferred<<515>>  The most ubiquitous floating-point format in use today is defined by the IEEE 754 standard, but certain hardware platforms such as GPUs utilize alternative floating-point arithmetic representations.\begin<<516>>tex2html_deferred<<516>>\footnote<<314>>We cite \texttt<<39>>bfloat16<<39>> \citep<<40>>Wang2019<<40>> and TensorFloat-32 \citep<<41>>Kharva2020<<41>>, among others.<<314>>\end<<517>>tex2html_deferred<<517>>
+\begin<<518>>tex2html_deferred<<518>>\par\end<<519>>tex2html_deferred<<519>>
+To summarize, given an abstract description of a floating point system, there are several practical implementations that can be derived.  We need to specify at least four quantities:  sign,\begin<<520>>tex2html_deferred<<520>>\footnote<<42>>We could omit the sign by introducing an offset or only allowing positive values.<<42>>\end<<521>>tex2html_deferred<<521>> significand, base, and exponent.\begin<<522>>tex2html_deferred<<522>>\footnote<<43>>The exponent has a bias so that it in turn does not need a sign.<<43>>\end<<523>>tex2html_deferred<<523>>  The base is presumably fixed by the protocol, leaving three free values for the implementation to economically encode.
+\begin<<524>>tex2html_deferred<<524>>\par\end<<525>>tex2html_deferred<<525>>
+\subsection<<44>>IEEE 754 Basics<<44>>
+\begin<<526>>tex2html_deferred<<526>>\par\end<<527>>tex2html_deferred<<527>>
+Early computer systems with floating-point units chose bespoke but incompatible representations, ultimately leading to the IEEE 754 (primarily architected by William Kahan).  IEEE 754 reconciled considerations from many floating-point implementations across hardware manufacturers into an internally consistent set of fixed-width representations.\begin<<528>>tex2html_deferred<<528>>\footnote<<45>>We ignore the decimal representations introduced in IEEE 754-2008, which do not materially change our argument.<<45>>\end<<529>>tex2html_deferred<<529>>  For instance, the 32-bit “single precision” C \texttt<<46>>float<<46>>/Fortran \texttt<<47>>REAL*4<<47>> specification denotes particular bit positions as meaningful,
+\begin<<530>>tex2html_deferred<<530>>\par\end<<531>>tex2html_deferred<<531>>
+\begin<<48>>tex2html_preform<<48>><tex2html_verbatim_mark>lstlisting32#\end<<49>>tex2html_preform<<49>>
+\noindent
+where \texttt<<50>>S<<50>> is the sign bit, \texttt<<51>>0<<51>> for positive (\begin<<372>>tex2html_wrap_inline<<372>>$+$\end<<373>>tex2html_wrap_inline<<373>>) and \texttt<<52>>1<<52>> for negative (\begin<<374>>tex2html_wrap_inline<<374>>$-$\end<<375>>tex2html_wrap_inline<<375>>); \texttt<<53>>E<<53>> is the exponent in base-2 (8 bits); and \texttt<<54>>F<<54>> is the significand (23 bits).  The exponent is actually calculated at an offset bias of 127 (\begin<<376>>tex2html_wrap_inline<<376>>$2^<<55>>7<<55>>$\end<<377>>tex2html_wrap_inline<<377>>) so that a more expressive range of orders of magnitude can be covered.  The significand has an implied leading \texttt<<56>>1<<56>> bit unless all are zero.  To wit,
+\begin<<532>>tex2html_deferred<<532>>\par\end<<533>>tex2html_deferred<<533>>
+\begin<<378>>displaymath<<378>>
+(-1)^<<315>>\mathtt<<57>>S<<57>><<315>> \times 2^<<316>>\mathtt<<58>>E<<58>>-127<<316>> \times 1.\mathtt<<59>>F<<59>>
+\end<<379>>displaymath<<379>>
+\noindent
+IEEE 754 specifies operations between numbers, including of different magnitudes.  The standard dictates behavior and provides outlines for arithmetic, but leaves algorithmic details to the implementation.  Numbers are normalized by adjusting the exponent of the smaller operand and aligning the significands, then the operations are carried out.  In practice, extended precision values are used in the intermediate steps of many algorithms, leading to greater accuracy than would otherwise be expected.\begin<<534>>tex2html_deferred<<534>>\footnote<<317>>“Each of the computational operations that return a numeric result specified by this standard shall be performed as if it first produced an intermediate result correct to infinite precision and with unbounded range, and then rounded that intermediate result, if necessary, to fit in the destination’s format.”  \citep<<60>>IEEE754-2008<<60>>  Note that, per \citeauthor<<61>>Risse2016<<61>>, “there is no indication whether or not a computation with IEEE 754 is exact even if all arguments are.”  The ISO/IEC9899 C standard confesses its own fallibility:  “The floating-point model is intended to clarify the description of each floating-point characteristic and does not require the floating-point arithmetic of the implementation to be identical” \citep[fn.~21]<<62>>ISO9899<<62>>.<<317>>\end<<535>>tex2html_deferred<<535>>
+\begin<<536>>tex2html_deferred<<536>>\par\end<<537>>tex2html_deferred<<537>>
+Since the IEEE 754 floating-point format packs values of different kind together bitwise, conventional integer operations such as left shift (\texttt<<63>>;SPMlt;;SPMlt;<<63>>) and addition (\texttt<<64>>+<<64>>) do not trivially apply.\begin<<538>>tex2html_deferred<<538>>\footnote<<318>>For instance, left-shifting \texttt<<65>>1.0<<65>> does not result in \texttt<<66>>2.0<<66>> but \texttt<<67>>1.7014118e38<<67>>; we leave the mathematics of why as an exercise to the reader.<<318>>\end<<539>>tex2html_deferred<<539>>
+\begin<<540>>tex2html_deferred<<540>>\par\end<<541>>tex2html_deferred<<541>>
+Floating-point addition (\texttt<<68>>add<<68>>) proceeds per the following algorithm:
+\begin<<542>>tex2html_deferred<<542>>\par\end<<543>>tex2html_deferred<<543>>
+\begin<<69>>enumerate<<69>>
+  \item  Compare exponents of the two numbers.  Shift the smaller number rightwards until its exponent matches the larger exponent.
+  \item  Add the significands together.
+  \item  Normalize the sum by either shifting right and incrementing the exponent, or shifting left and decrementing the exponent.
+  \item  If an overflow or an underflow occurs, yield an exception.
+  \item  Round the significand to the appropriate number of bits.
+  \item  Renormalize as necessary (back to step 3).
+\end<<70>>enumerate<<70>>
+\begin<<544>>tex2html_deferred<<544>>\par\end<<545>>tex2html_deferred<<545>>
+IEEE 754 floating-point arithmetic and its predecessors have some significant mathematical compromises even in its formal specification.\begin<<546>>tex2html_deferred<<546>>\footnote<<71>>None of this intends to demean the impressive technical accomplishment of IEEE 754 and its architects.<<71>>\end<<547>>tex2html_deferred<<547>>  For instance, as a result of the discrete nature of the bitwise representation in \texttt<<72>>E<<72>> and \texttt<<73>>F<<73>>, floating-point mathematics are actually a subset of discrete mathematics masquerading as real mathematics.  This has non-trivial consequences for certain aspects of calculations, including error accrual.  In particular, three facts dominate the resolution:
+\begin<<548>>tex2html_deferred<<548>>\par\end<<549>>tex2html_deferred<<549>>
+\begin<<74>>enumerate<<74>>
+  \item  The distance between two adjacent values changes based on the magnitude of the exponent and the distance from zero.  (The significand resolution stays the same but the exponent changes.)
+  \item  There is a relative approximation error for a given bitwidth in IEEE 754, called the \emph<<75>>machine epsilon<<75>>.\begin<<550>>tex2html_deferred<<550>>\footnote<<319>>Note that this is different from the smallest representable value for a given bit width; e.g., for 32-bit single-precision \texttt<<76>>float<<76>> the smallest representable value is \begin<<380>>tex2html_wrap_inline<<380>>$\mathtt<<77>>0000.0000.0000.0000.0000.0000.0000.0001<<77>> = 1\times 10^<<78>>-45<<78>>$\end<<381>>tex2html_wrap_inline<<381>>.<<319>>\end<<551>>tex2html_deferred<<551>>
+  \item  Operations between numbers of different magnitudes are particularly affected by their relative numerical horizon.
+\end<<79>>enumerate<<79>>
+\begin<<552>>tex2html_deferred<<552>>\par\end<<553>>tex2html_deferred<<553>>
+\paragraph<<80>>Variable precision and truncation error.<<80>>
+\begin<<554>>tex2html_deferred<<554>>\par\end<<555>>tex2html_deferred<<555>>
+For most values of the exponent \texttt<<81>>E<<81>>, the difference between two discrete values is determined by the absolute magnitude of the significand \texttt<<82>>S<<82>>.  The difference between serial values is
+\begin<<83>>align<<83>>
+  \Delta\mathtt<<84>>S<<84>> ;SPMamp;= \mathtt<<85>>000.0000.0000.0000.0000.0001<<85>>_<<86>>2<<86>> \nonumber \\ 
+  ;SPMamp; = 1.00000011920928955078125 - 1.0 \nonumber \\ 
+  ;SPMamp; = 0.00000011920928955078125 \nonumber \\ 
+  ;SPMamp; = 2^<<87>>-23<<87>>\textrm<<88>>.<<88>>
+\end<<89>>align<<89>>
+\begin<<556>>tex2html_deferred<<556>>\par\end<<557>>tex2html_deferred<<557>>
+\noindent
+This is multipled by the the result of the exponent \texttt<<90>>E<<90>> and the bias, meaning that for each exponent value the difference between subsequent values changes.  (Figure \ref<<91>>fig:fp-res<<91>> represents this schematically.)
+\begin<<558>>tex2html_deferred<<558>>\par\end<<559>>tex2html_deferred<<559>>
+\begin<<92>>figure<<92>>[htb]
+\includegraphics[width=\textwidth]<<93>>img/fp-res<<93>>
+\begin<<560>>tex2html_deferred<<560>>\caption<<94>>Schematic representation of granularity and variable precision of floating-point values and their relationship to the (continuous) set of real numbers.<<94>>\end<<561>>tex2html_deferred<<561>>
+\label<<95>>fig:fp-res<<95>>
+\end<<96>>figure<<96>>
+\begin<<562>>tex2html_deferred<<562>>\par\end<<563>>tex2html_deferred<<563>>
+However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the \emph<<97>>relative shift<<97>> in exponent \begin<<382>>tex2html_wrap_inline<<382>>$\Delta\mathtt<<98>>E<<98>>$\end<<383>>tex2html_wrap_inline<<383>>.  For \begin<<384>>tex2html_wrap_inline<<384>>$\mathtt<<99>>E<<99>> = 2$\end<<385>>tex2html_wrap_inline<<385>>, for instance, the difference between serial values is \begin<<386>>tex2html_wrap_inline<<386>>$2^<<100>>-21<<100>>$\end<<387>>tex2html_wrap_inline<<387>>.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
+\begin<<564>>tex2html_deferred<<564>>\par\end<<565>>tex2html_deferred<<565>>
+Truncation error results from terminating repeating “binaries” (by analogy with “decimals”).  Just as \begin<<388>>tex2html_wrap_inline<<388>>$\frac<<101>>1<<101>><<102>>3<<102>> = 0.\bar<<103>>3<<103>> = 0.3333…$\end<<389>>tex2html_wrap_inline<<389>>\space has a finite precision when written in base-10, numbers that are not precise powers of two result in repeating fractions.  These necessarily terminate at the resolution of the significand.  The number and nature of truncation and rounding can significantly affect the accuracy of floating-point arithmetic and algorithms \citep<<104>>Izquierdo2006<<104>>.
+\begin<<566>>tex2html_deferred<<566>>\par\end<<567>>tex2html_deferred<<567>>
+\paragraph<<105>>Machine epsilon.<<105>>
+\begin<<568>>tex2html_deferred<<568>>\par\end<<569>>tex2html_deferred<<569>>
+The machine epsilon, or smallest value discernable from 1.0, is determined by the precision of the floating-point representation.  The machine epsilon for a particular bit width is determined by setting two to the negative power of the number of bits used for the magnitude of the mantissa and accounting for the leading implicit bit \texttt<<106>>1<<106>>; for 32-bit single-precision \texttt<<107>>float<<107>> this is \begin<<390>>tex2html_wrap_inline<<390>>$2^<<320>>-<<108>>23-1<<108>><<320>> = 2^<<109>>-22<<109>>$\end<<391>>tex2html_wrap_inline<<391>>.  Differences from 1.0 smaller than this cannot be represented in this bit width.
+\begin<<570>>tex2html_deferred<<570>>\par\end<<571>>tex2html_deferred<<571>>
+\paragraph<<110>>Sequence ordering.<<110>>
+\begin<<572>>tex2html_deferred<<572>>\par\end<<573>>tex2html_deferred<<573>>
+In situations in which floating-point operations may occur in different orders, even the basic guarantee of communitativity breaks.  For instance, in 64-bit FP arithmetic, the following holds true (example in Python):
+\begin<<574>>tex2html_deferred<<574>>\par\end<<575>>tex2html_deferred<<575>>
+\lstset<<111>>language=Python<<111>>
+\begin<<112>>tex2html_preform<<112>><tex2html_verbatim_mark>lstlisting33#\end<<113>>tex2html_preform<<113>>
+\begin<<576>>tex2html_deferred<<576>>\par\end<<577>>tex2html_deferred<<577>>
+\noindent
+This occurs since operations of different magnitude can affect the resulting significand, a sort of horizon of resolution leading to differences in the outcome.  Sequence order can be changed (and thus commutativity broken) as a result of many common programmer design patterns, including compiler optimizations, race conditions, and parallelization.
+\begin<<578>>tex2html_deferred<<578>>\par\end<<579>>tex2html_deferred<<579>>
+Another problem in numerical analysis, error accrual is likewise due to the horizon of resolution.  The accrual of error due to summing sequences of numbers (whether in parallel or serially) occurs in the summation of sequences of numbers since the error term can grow as \begin<<392>>tex2html_wrap_inline<<392>>$n$\end<<393>>tex2html_wrap_inline<<393>>.  Kahan–Babuška compensated summation can be used to track a separate error term (\emph<<114>>de facto<<114>> extending the precision during the operations) and adding it back in to the sum before yielding the final result \citep<<115>>Kahan1965,Babuska1969<<115>>.
+\begin<<580>>tex2html_deferred<<580>>\par\end<<581>>tex2html_deferred<<581>>
+Formally neither associative nor commutative for the above reasons, floating-point arithmetic can break our mathematical intuitions in interesting ways.  However, this is a consistent and well-understood phenomenon.  For our purposes as designers of deterministic computers, the most damning indictment has to do not with IEEE 754 itself but with manufacturer deviation in hardware implementation.  In 1997, William Kahan himself complained (justly) about the compromises inherent in the standard for compiler implementers:
+\begin<<582>>tex2html_deferred<<582>>\par\end<<583>>tex2html_deferred<<583>>
+\begin<<116>>quote<<116>>
+Most computer linguists find floating-point arithmetic too disruptive [due to] [t]heir predilection for “referential transparency” ….  Computer linguists also dislike functions with side-effects and functions affected by implicit variables not explicit in argument lists. But floating-point operations can raise IEEE 754 exception flags as side-effects, and operations are affected implicitly by exception-handling and rounding modes eligible at run-time according to IEEE 754. Alas, that standard omitted to bind flags and modes to locutions in standard programming languages, and this omission grants computer linguists a licence for inaction.  \citep<<117>>Kahan1997<<117>>
+\end<<118>>quote<<118>>
+\begin<<584>>tex2html_deferred<<584>>\par\end<<585>>tex2html_deferred<<585>>
+There are several sources of trouble for even single-threaded deterministic computation using hardware IEEE 754 floating-point units (FPUs):\begin<<586>>tex2html_deferred<<586>>\footnote<<321>>We do not lay blame at the feet of any particular party; the facts are the facts.  Indeed, a more recent revision of IEEE 754 leads with a call for portability:  “This standard provides a discipline for performing floating-point computation that yields results independent of whether the processing is done in hardware, software, or a combination of the two” \citep<<119>>IEEE754-2008<<119>>.<<321>>\end<<587>>tex2html_deferred<<587>>
+\begin<<588>>tex2html_deferred<<588>>\par\end<<589>>tex2html_deferred<<589>>
+\begin<<120>>enumerate<<120>>
+  \item  Optional, discretionary, or advisory aspects.
+  \item  Gaps or omissions in the specification.
+  \item  Failure to implement the specification exactly.
+  \item  Out-of-sequence computations.
+\end<<121>>enumerate<<121>>
+\begin<<590>>tex2html_deferred<<590>>\par\end<<591>>tex2html_deferred<<591>>
+\subparagraph<<122>>Optional aspects.<<122>>
+\begin<<592>>tex2html_deferred<<592>>\par\end<<593>>tex2html_deferred<<593>>
+Several aspects of IEEE 754 are optional or advisory, including:
+\begin<<594>>tex2html_deferred<<594>>\par\end<<595>>tex2html_deferred<<595>>
+\begin<<123>>enumerate<<123>>
+  \item  Exception handling means that the hardware may specify rounding via an overflow flag.
+  \item  Extended precisions formats are not a huge deal to leave out, but extended precision arithmetic (used for intermediate results) can materially change results.
+  \item  Subnormals are optional;\begin<<596>>tex2html_deferred<<596>>\footnote<<124>>Subnormals are a convention that allows values smaller than the “normal” IEEE 754 smallest non-zero value.  They permit a graceflow underflow behavior, and can prevent an unintentional division by zero.<<124>>\end<<597>>tex2html_deferred<<597>> some platforms may flush them to zero or (worse) allow subnormal support to be disabled in certain cases.\begin<<598>>tex2html_deferred<<598>>\footnote<<322>>“Some processors do not support subnormal numbers in hardware” \citep[p.~338]<<125>>Jones2008<<125>>.  (The risk is that this permits inadvertent division by zero.)  Various chipsets solve this exceptional behavior differently.<<322>>\end<<599>>tex2html_deferred<<599>>
+\end<<126>>enumerate<<126>>
+\begin<<600>>tex2html_deferred<<600>>\par\end<<601>>tex2html_deferred<<601>>
+\subparagraph<<127>>Omissions.<<127>>
+\begin<<602>>tex2html_deferred<<602>>\par\end<<603>>tex2html_deferred<<603>>
+Whether something is a gap or optional is something of a philosophical question for us, but some parts are underspecified in a way that makes portability impossible.  E.g., mixed-precision operations can yield unpredictable results depending on the compiler and hardware.  This is a function of rounding modes, precision loss, precision of intermediate results, and the presence or absence of dedicated hardware support for certain precision combinations.
+\begin<<604>>tex2html_deferred<<604>>\par\end<<605>>tex2html_deferred<<605>>
+\subparagraph<<128>>Inexact implementation.<<128>>
+\begin<<606>>tex2html_deferred<<606>>\par\end<<607>>tex2html_deferred<<607>>
+Failure to implement IEEE 754 correctly may happen inadvertently, as with the Pentium FDIV bug in the 1990s \citep<<129>>Edelman1997<<129>>.  Alternatively, chipset designers may deviate from the specification for reasons of performance or limitations in the architecture.
+\begin<<608>>tex2html_deferred<<608>>\par\end<<609>>tex2html_deferred<<609>>
+For instance, IEEE 754 defines a range of numbers as “not-a-number” values, or NaNs.  Per the specification, a NaN can be a signalling NaN, meaning that it intends to flag and possibly disrupt a problematic computation;\begin<<610>>tex2html_deferred<<610>>\footnote<<323>>“C support for signaling NaNs, or for auxiliary information that could be encoded in NaNs, is problematic.  Trap handling varies widely among implementations. Implementation mechanisms may trigger signaling NaNs, or fail to, in mysterious ways.  The IEC 60559 floating-point standard recommends that NaNs propagate; but it does not require this and not all implementations do.”  \citep[p.~339]<<130>>Jones2008<<130>><<323>>\end<<611>>tex2html_deferred<<611>> or a quiet NaN, which does not raise such an exception and merely yields a result with the NaN propagated to the final result.\begin<<612>>tex2html_deferred<<612>>\footnote<<131>>In Urbit, the Vere runtime unifies NaNs, meaning that any bitwise information which may be encoded in the significand field—the “NaN payload”—is thrown away.<<131>>\end<<613>>tex2html_deferred<<613>>  Not all processors implement this part of IEEE 754 correctly:  “The Motorola DSP563CCC does not support NaNs or infinities.  Floating-point arithmetic operations do not overflow to infinity; they saturate at the maximum representable value” \citep[p.~338]<<132>>Jones2008<<132>>.
+\begin<<614>>tex2html_deferred<<614>>\par\end<<615>>tex2html_deferred<<615>>
+As a further example, fused multiply-add (FMA) (\begin<<394>>tex2html_wrap_inline<<394>>$a \times b + c$\end<<395>>tex2html_wrap_inline<<395>>) is implemented on certain hardware to favor \texttt<<133>>double<<133>> operations and not quadruple-precision operations \citep[p.~5]<<134>>Kahan1997<<134>>.
+\begin<<616>>tex2html_deferred<<616>>\par\end<<617>>tex2html_deferred<<617>>
+\subparagraph<<135>>Out-of-sequence computations.<<135>>
+\begin<<618>>tex2html_deferred<<618>>\par\end<<619>>tex2html_deferred<<619>>
+A modern compiler using optimization flags or even modest parallelism can easily cause a floating-point calculation to rely on operands that were produced in an order different than that specified in the code.  This is largely opaque to the programmer, aside from some simple heuristics, and makes it difficult to reproduce or reason about the fine details of computations.
+\begin<<620>>tex2html_deferred<<620>>\par\end<<621>>tex2html_deferred<<621>>
+As demonstrated above, out-of-sequence or resequenced computations can affect results due to rounding behavior and the “numerical horizon” which results between values.  These can happen due to multithreaded computation or an optimizing compiler.
+\begin<<622>>tex2html_deferred<<622>>\par\end<<623>>tex2html_deferred<<623>>
+\paragraph<<136>>Rounding mode.<<136>>
+\begin<<624>>tex2html_deferred<<624>>\par\end<<625>>tex2html_deferred<<625>>
+IEEE 754 floating-point operations take place using one of four rounding modes.
+\begin<<626>>tex2html_deferred<<626>>\par\end<<627>>tex2html_deferred<<627>>
+\begin<<137>>enumerate<<137>>
+  \item  Round to nearest, ties to even.  Set ties to the last bit as zero (even).  The default.
+  \item  Round to zero.  Truncate, effectively rounding positive numbers down and negative numbers up.
+  \item  Round toward positive infinity.  Up regardless of sign.
+  \item  Round toward negative infinity.  Down regardless of sign.
+\end<<138>>enumerate<<138>>
+\begin<<628>>tex2html_deferred<<628>>\par\end<<629>>tex2html_deferred<<629>>
+\noindent
+The rounding mode can affect the result of computations, and if other processes are changing the mode (which can even be set per-thread), results may not be reliably reproducible.
+\begin<<630>>tex2html_deferred<<630>>\par\end<<631>>tex2html_deferred<<631>>
+“Obtaining the correctly rounded result of an addition or subtraction operation requires an additional bit in the significand (as provided by the IEC 60559 guard bit) to hold the intermediate result” \citep[p.~65]<<139>>Jones2008<<139>>.
+\begin<<632>>tex2html_deferred<<632>>\par\end<<633>>tex2html_deferred<<633>>
+\section<<140>>Urbit's Implementation of IEEE 754<<140>>
+\begin<<634>>tex2html_deferred<<634>>\par\end<<635>>tex2html_deferred<<635>>
+Urbit implements a subset of IEEE 754 functionality in <tex2html_verblst_mark>1<tex2html_verb_mark>@rs (single-precision \texttt<<141>>float<<141>>) as representative.\begin<<636>>tex2html_deferred<<636>>\footnote<<142>>The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values <tex2html_verblst_mark>2<tex2html_verb_mark>double<<142>>\end<<637>>tex2html_deferred<<637>>s.
+\begin<<638>>tex2html_deferred<<638>>\par\end<<639>>tex2html_deferred<<639>>
+<tex2html_verblst_mark>3<tex2html_verb_mark>++add using the <tex2html_verblst_mark>4<tex2html_verb_mark>The decimal output is produced using the traditional Steele–White Dragon4 algorithm \citep<<143>>Steele1991<<143>>.  It is worth considering upgrading Hoon from Dragon4 to Errol \citep<<144>>Andrysco2016<<144>> for speed and accuracy.
+\begin<<640>>tex2html_deferred<<640>>\par\end<<641>>tex2html_deferred<<641>>
+The <tex2html_verblst_mark>5<tex2html_verb_mark>In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.  The actual implementation on <tex2html_verb_mark>7<tex2html_verb_mark>language=Hoon
+\begin<<145>>tex2html_preform<<145>><tex2html_verbatim_mark>lstlisting34#\end<<146>>tex2html_preform<<146>>
+\begin<<642>>tex2html_deferred<<642>>\par\end<<643>>tex2html_deferred<<643>>
+There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are \emph<<147>>jetted<<147>>.\begin<<644>>tex2html_deferred<<644>>\footnote<<324>>A shorthand for \emph<<148>>jet-accelerated code<<148>>.<<324>>\end<<645>>tex2html_deferred<<645>>  Thus the actual call in this case will correspond to some C code using the SoftFloat library:\begin<<646>>tex2html_deferred<<646>>\footnote<<325>>\texttt<<149>>u3<<149>> functions are Urbit noun library functions.  The \texttt<<150>>sing<<150>> union is a union of \texttt<<151>>uint32\_t<<151>> and SoftFloat \texttt<<152>>float32\_t<<152>> types.<<325>>\end<<647>>tex2html_deferred<<647>>
+\begin<<648>>tex2html_deferred<<648>>\par\end<<649>>tex2html_deferred<<649>>
+\lstset<<153>>language=C<<153>>
+\begin<<154>>tex2html_preform<<154>><tex2html_verbatim_mark>lstlisting35#\end<<155>>tex2html_preform<<155>>
+\begin<<650>>tex2html_deferred<<650>>\par\end<<651>>tex2html_deferred<<651>>
+Why SoftFloat?  Enter, stage left, the problem of platform-portable determinism.
+\begin<<652>>tex2html_deferred<<652>>\par\end<<653>>tex2html_deferred<<653>>
+\section<<156>>Deterministic Computation with a Fractional Part<<156>>
+\begin<<654>>tex2html_deferred<<654>>\par\end<<655>>tex2html_deferred<<655>>
+Non-real arithmetic is less significant for many of the core operations of Urbit as a personal server platform.  However, gaming, machine learning, graphics, and other applications rely on floating-point calculations—preferably as fast as possible.  In fact, not only applications-oriented processes rely on determinism:  guarantees in cryptography and contractual correctness for web3; verification and validation; accounting and legal compliance; and code correctness analysis all require reproducible determinism.\begin<<656>>tex2html_deferred<<656>>\footnote<<157>>Support for IEEE 754 is similar for support for the Markdown markup language.  Many platforms support a subset of Markdown coupled with platform-specific extensions.  (See also SQL.)  Internal references, HTML, inline \LaTeX~math mode, code block language specification, and other features see varying levels of support with GitHub, Pandoc, Obsidian, and other editors and converters.<<157>>\end<<657>>tex2html_deferred<<657>>
+\begin<<658>>tex2html_deferred<<658>>\par\end<<659>>tex2html_deferred<<659>>
+Why can't we just allow different results in the last binary places of the significand?  Philosophically, Urbit holds the following statements as bedrock truth \citep<<158>>Monk2020<<158>>:
+\begin<<660>>tex2html_deferred<<660>>\par\end<<661>>tex2html_deferred<<661>>
+\begin<<159>>enumerate<<159>>
+  \item  A10.  Correctness is more important than performance.
+  \item  A12.  Correctness is more important than optimality.
+  \item  A14.  Deterministic beats heuristic.
+  \item  F1.  If it's not deterministic, it isn't real.
+\end<<160>>enumerate<<160>>
+\begin<<662>>tex2html_deferred<<662>>\par\end<<663>>tex2html_deferred<<663>>
+Urbit makes much of avoiding the “ball of mud” “standard software architecture” \citep<<161>>Foote1999<<161>>.  In this design anti-pattern, a lack of guarantees and predictable behavior leads \emph<<162>>inevitably<<162>> to haphazard and illegible software bloat \citep<<163>>Foote1999<<163>>.  We can thus understand why Urbit as a platform considers even deviations in the last bit of a significand to be threads fraying the edge of sanity \citet<<164>>Monk2020a<<164>>:
+\begin<<664>>tex2html_deferred<<664>>\par\end<<665>>tex2html_deferred<<665>>
+\begin<<165>>quote<<165>>
+If you do the same thing twice, your computer should react the same way.  This is comforting.  This is also what makes it easy to reason about and use effectively.  If you're not sure what your computer will do, you'll be afraid of it and act defensively toward it.  This inevitably leads to a big ball of mud.
+\end<<166>>quote<<166>>
+\begin<<666>>tex2html_deferred<<666>>\par\end<<667>>tex2html_deferred<<667>>
+For most purposes in the broader software world, tightly reproducible precision has not been a high priority.  Precision having already been sacrificed, the gist of the calculation is more important than the fourth decimal place (e.g. in realtime 3D graphics).  This leads the phrase “implements the IEEE 754 standard” to be interpreted erroneously to imply full reproducibility \citep<<167>>Figueroa2000<<167>>.
+\begin<<668>>tex2html_deferred<<668>>\par\end<<669>>tex2html_deferred<<669>>
+For example, consider the expression \begin<<396>>tex2html_wrap_inline<<396>>$(a \times b) + c$\end<<397>>tex2html_wrap_inline<<397>>.  If a compiler permits the two operations to be evaluated sequentially (a multiplication followed by an addition), then rounding occurs twice.  If a compiler optimizes the operation into an FMA, or fused multiply-add, then a single rounding occurs.  \citeauthor<<168>>Peters2021<<168>> presents a pathological case for 32-bit single-precision floating-point values:  \begin<<398>>tex2html_wrap_inline<<398>>$a = 1.00000011920929$\end<<399>>tex2html_wrap_inline<<399>>, \begin<<400>>tex2html_wrap_inline<<400>>$b = 53400708$\end<<401>>tex2html_wrap_inline<<401>>, and \begin<<402>>tex2html_wrap_inline<<402>>$c = -b$\end<<403>>tex2html_wrap_inline<<403>>.  In this case, the two-stage operation wipes out the \begin<<404>>tex2html_wrap_inline<<404>>$0.00000011920929$\end<<405>>tex2html_wrap_inline<<405>>\space component of \begin<<406>>tex2html_wrap_inline<<406>>$a$\end<<407>>tex2html_wrap_inline<<407>>, yielding \begin<<408>>tex2html_wrap_inline<<408>>$a$\end<<409>>tex2html_wrap_inline<<409>>\space as an integer.  Then \begin<<410>>tex2html_wrap_inline<<410>>$c$\end<<411>>tex2html_wrap_inline<<411>>\space is added and the result is \begin<<412>>tex2html_wrap_inline<<412>>$8$\end<<413>>tex2html_wrap_inline<<413>>.  With FMA as a single-step operation, the (correct) answer \begin<<414>>tex2html_wrap_inline<<414>>$6.365860462$\end<<415>>tex2html_wrap_inline<<415>>\space is obtained.  The optimization is more correct than the naïve route in this case.
+\begin<<670>>tex2html_deferred<<670>>\par\end<<671>>tex2html_deferred<<671>>
+However, in another example due to \citeauthor<<169>>Dawson2013<<169>>, FMA yields incorrect results:  for \begin<<416>>tex2html_wrap_inline<<416>>$a \times b + c \times d$\end<<417>>tex2html_wrap_inline<<417>>\space with \begin<<418>>tex2html_wrap_inline<<418>>$a = c$\end<<419>>tex2html_wrap_inline<<419>>\space and \begin<<420>>tex2html_wrap_inline<<420>>$b = -d$\end<<421>>tex2html_wrap_inline<<421>>, the answer should be zero, and calculated in two steps will typically be zero.  With a fused multiply-add, however, the code becomes \texttt<<170>>fmadd(a, b, c*d)<<170>>, rounding the multiplication of \begin<<422>>tex2html_wrap_inline<<422>>$c$\end<<423>>tex2html_wrap_inline<<423>>\space and \begin<<424>>tex2html_wrap_inline<<424>>$d$\end<<425>>tex2html_wrap_inline<<425>>\space but not that of \begin<<426>>tex2html_wrap_inline<<426>>$a$\end<<427>>tex2html_wrap_inline<<427>>\space and \begin<<428>>tex2html_wrap_inline<<428>>$b$\end<<429>>tex2html_wrap_inline<<429>>; the answer will likely not be zero.
+\begin<<672>>tex2html_deferred<<672>>\par\end<<673>>tex2html_deferred<<673>>
+The situation grows more ambiguous across architectures.  \citet[p.~346]<<171>>Jones2008<<171>> presents the pathological case of a compliant platform that may use extended precision bits in the calculation of \texttt<<172>>a + b<<172>>:
+\begin<<674>>tex2html_deferred<<674>>\par\end<<675>>tex2html_deferred<<675>>
+\lstset<<173>>language=C<<173>>
+\begin<<174>>tex2html_preform<<174>><tex2html_verbatim_mark>lstlisting36#\end<<175>>tex2html_preform<<175>>
+\begin<<676>>tex2html_deferred<<676>>\par\end<<677>>tex2html_deferred<<677>>
+\noindent
+In this hypothetical case, “any extended precision bits will be lost in the first calculation of a+b when it is assigned to x. The result of the second calculation of a+b may be held in a working register at the extended precision and potentially contain additional value bits not held in x, the result of the equality test then being false.”  \citet<<176>>Higham2002<<176>> provides further examples of pathological cases.
+\begin<<678>>tex2html_deferred<<678>>\par\end<<679>>tex2html_deferred<<679>>
+K\&R C permitted the compiler to re-order floating-point expressions by associativity, which could run afoul of our limitations.  ANSI C (C89), recognizing the issue introduced by this innocuous change, forbade such re-ordering \citep<<177>>MacDonald1991<<177>>.  Compiler optimizations (e.g. GCC's \texttt<<178>>-O3<<178>>) can bypass this restriction, once again breaking determinism;\begin<<680>>tex2html_deferred<<680>>\footnote<<326>>This can be mitigated in turn by the use of the \texttt<<179>>volatile<<179>> designation, but this is sufficient to illustrate the problem.<<326>>\end<<681>>tex2html_deferred<<681>> for instance, floating-point operations can be pipelined, leading to out-of-order execution.
+\begin<<682>>tex2html_deferred<<682>>\par\end<<683>>tex2html_deferred<<683>>
+The fly in the ointment for Urbit's deterministic computing is that jet-accelerated Nock equivalents must reliably produce the same results (both to each other and to Nock) regardless of the runtime on which it is being evaluated.  Thus even small irregularities in floating-point implementations have macroscopic ramifications for deterministic computing.  Any guarantee broken breaks them all, just as it would for a formal correctness proof.\begin<<684>>tex2html_deferred<<684>>\footnote<<180>>I was once asked by a retired computer science professor if such guarantees would make things easier.  Well, at the end developer level!<<180>>\end<<685>>tex2html_deferred<<685>>
+\begin<<686>>tex2html_deferred<<686>>\par\end<<687>>tex2html_deferred<<687>>
+The challenge of the lack of determinacy for certain critical applications has been acknowledged before, such as by James Demmel and the \texttt<<181>>ReproBLAS<<181>> team \citep<<182>>Demmel2017, ReproBLAS<<182>> and by \citeauthor<<183>>Dawson2013<<183>>.  Dawson makes much of the effect of rounding modes and the option to disable subnormals, both of which would have major effects on computational reproducibility.  The situation is worse for transcendental functions, because there is necessarily truncation and/or rounding error \citep<<184>>Dawson2013<<184>>.
+\begin<<688>>tex2html_deferred<<688>>\par\end<<689>>tex2html_deferred<<689>>
+The field of debate for possible solutions for implementing floating-point arithmetic which is portable across platforms includes:
+\begin<<690>>tex2html_deferred<<690>>\par\end<<691>>tex2html_deferred<<691>>
+\begin<<185>>enumerate<<185>>
+  \item  Hardware-supported floating-point arithmetic.
+  \item  Software-defined floating-point library.
+  \item  Opaque calculations.
+  \item  Stored results.
+  \item  Proscribing IEEE 754.
+\end<<186>>enumerate<<186>>
+\begin<<692>>tex2html_deferred<<692>>\par\end<<693>>tex2html_deferred<<693>>
+We consider each in turn, with its ramifications for a deterministic computing platform and in particular its prospects for adoption in Nock-based systems.
+\begin<<694>>tex2html_deferred<<694>>\par\end<<695>>tex2html_deferred<<695>>
+\subsection<<187>>Hardware-supported floating-point arithmetic<<187>>
+\begin<<696>>tex2html_deferred<<696>>\par\end<<697>>tex2html_deferred<<697>>
+As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, non-negligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be \emph<<188>>prima facie<<188>> unviable for deterministic computing.\begin<<698>>tex2html_deferred<<698>>\footnote<<327>>Although not of grave consequence, the C language (as of C23) does not implement at least two types specified by IEEE 754-2019 and recent predecessors:  \texttt<<189>>binary128<<189>> quadruple precision and \texttt<<190>>binary256<<190>> octuple precision.  While neither are significant losses, we also note that Urbit does not currently support a C-style \texttt<<191>>long double<<191>> type.  C's \texttt<<192>>long double<<192>> is 80 bits wide on some common consumer hardware, such as the x86-64 architecture, but is 128 bits wide on the 64-bit ARM architecture.  (The situation is worse for Python, whose \texttt<<193>>numpy.float128<<193>> type eponymously advertises itself as quadruple precision but is in fact a regular 80-bit \texttt<<194>>long double<<194>>.)  Some compilers and libraries do support quadruple-precision floating-point mathematics, such as GCC's \texttt<<195>>\_\_float128<<195>> type.  We note that IEEE 754 80-bit extended-precision could be implemented using the <tex2html_verblst_mark>8<tex2html_verb_mark>enumerate<<327>>\end<<699>>tex2html_deferred<<699>>
+  \item  Control the compiler and runtime stack top to bottom.
+  \item  Store a hardware and compiler tag and simulate when not on that platform.
+  \item  Support only a single hardware for the lifetime of a ship.
+  \item  Dock floating-point results.
+  \item  Check consistency of results.
+\end<<196>>enumerate<<196>>
+\begin<<700>>tex2html_deferred<<700>>\par\end<<701>>tex2html_deferred<<701>>
+\subsubsection<<197>>Control the stack<<197>>
+\begin<<702>>tex2html_deferred<<702>>\par\end<<703>>tex2html_deferred<<703>>
+If you controlled the compiler and runtime execution stack to a sufficient degree, could you yield deterministic floating-point arithmetic from the hardware?  “A translator that generates very high performance code is of no use if the final behavior is incorrect” \citep[p.~189]<<198>>Jones2008<<198>>; that is, optimizations often come at the cost of correctness.
+\begin<<704>>tex2html_deferred<<704>>\par\end<<705>>tex2html_deferred<<705>>
+To start off, what must be considered part of the stack in this sense?  At a minimum, the compiler and linker toolchain (including flags and options) and the actual runtime must be included.  (This explicitly introduces a dependence between Martian software and Earthling software, repugnant to the Urbit ethos.)
+\begin<<706>>tex2html_deferred<<706>>\par\end<<707>>tex2html_deferred<<707>>
+We also must decide what the target is.  Do we aim for the most portable configuration (as determined by number of consumer or enterprise users)?  Do we aim for the “closest” to IEEE 754 adherence?  Do we aim for simplicity, or compilation speed, or any of a half-dozen other optimizable variables?
+\begin<<708>>tex2html_deferred<<708>>\par\end<<709>>tex2html_deferred<<709>>
+For instance, suppose that one intended to use the C keyword \texttt<<199>>volatile<<199>> to block certain common optimizations on a floating-point value.\begin<<710>>tex2html_deferred<<710>>\footnote<<328>>In any case, this assumes a legible and enumerable set of behaviors for \texttt<<200>>volatile<<200>> which is, alas, not the case.  “\texttt<<201>>volatile<<201>> is a hint to the implementation to avoid aggressive optimization involving the object because the value of the object might be changed by means undetectable by an implementation” \citep[p.~472]<<202>>Jones2008<<202>>.  “Actions on objects so declared shall not be ‘optimized out’ by an implementation or reordered except as permitted by the rules for evaluating expressions” \citep[p.~1500]<<203>>Jones2008<<203>>.  “The \texttt<<204>>volatile<<204>> qualifier only indicates that the value of an object may change in ways unknown to the translator (therefore the quality of generated machine code may be degraded because a translator cannot make use of previous accesses to optimize the current access)” \citep[p.~963]<<205>>Jones2008<<205>>.  The same author provides examples of C code that is ambiguous in \texttt<<206>>volatile<<206>>'s semantics, pp.~1290–1291; and undefined in \texttt<<207>>volatile<<207>>'s semantics, pp.~1482–1483.<<328>>\end<<711>>tex2html_deferred<<711>>  The runtime at the level of Nock does not know if a value is considered floating-point or not.  At the level of a jet, the use of \texttt<<208>>volatile<<208>> can correctly bar certain hardware optimizations, but these need to be carefully enumerated and understood in the light of the other toolchain concerns enumerated in this section.  Strictly speaking, \texttt<<209>>volatile<<209>> only seeks to guarantee that stale calculations are not inadvertently reused due to optimization.  Without hardware optimization, the utility of an FLU for fast floating-point computations is questionable.  The risk of a jet mismatch remains high, as does a nonportable jet.\begin<<712>>tex2html_deferred<<712>>\footnote<<329>>“What constitutes an access to an object that has volatile-qualified type is implementation-defined” \citep[p.~1488]<<210>>Jones2008<<210>>.  “Volatile-qualified objects can also be affected by translator optimizations” \citep[p.~1490]<<211>>Jones2008<<211>>.  The C novice may at this point wonder what the intended utility of \texttt<<212>>volatile<<212>> in fact is:  “[a] \texttt<<213>>volatile<<213>> declaration may be used to describe an object corresponding to a memory-mapped input/output port or an object accessed by an asynchronously interrupting function” \citep[p.~1499]<<214>>Jones2008<<214>>.<<329>>\end<<713>>tex2html_deferred<<713>>
+\begin<<714>>tex2html_deferred<<714>>\par\end<<715>>tex2html_deferred<<715>>
+Can the C-defined floating-point environment (as supplied by \texttt<<215>>fenv.h<<215>>) answer to this need?  This affords the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear whether this environmental control portably spans the entire output of floating-point computations.\begin<<716>>tex2html_deferred<<716>>\footnote<<330>>“The floating-point environment access and modification is only meaningful when \texttt<<216>>\#pragma STDC FENV\_ACCESS<<216>> is set to \texttt<<217>>ON<<217>>.  \ldots<<218>><<218>> In practice, few current compilers, such as HP aCC, Oracle Studio, and IBM XL, support the \texttt<<219>>\#pragma<<219>> explicitly, but most compilers allow meaningful access to the floating-point environment anyway.” \citep<<220>>CPPRef<<220>><<330>>\end<<717>>tex2html_deferred<<717>>
+\begin<<718>>tex2html_deferred<<718>>\par\end<<719>>tex2html_deferred<<719>>
+Finally, “[a]n implementation is not required to provide a facility for altering the modes for translation-time arithmetic, or for making exception flags from the translation available to the executing program” \citep[p.~200]<<221>>Jones2008<<221>>.  The information we purport to gain by controlling the stack in the manner above outlined is possibly not even available to the compiler and the runtime executable.
+\begin<<720>>tex2html_deferred<<720>>\par\end<<721>>tex2html_deferred<<721>>
+We suggest that deterministically correct stack control in the sense we have described here is impossible for an arbitrary configuration of the modern hardware stack.\begin<<722>>tex2html_deferred<<722>>\footnote<<331>>The possibility of circumscribing the set of permissible IEEE 754 operations, which may afford a different approach to this problem but seems similarly susceptible of shipwreck, is explored in a subsequent section, \emph<<222>>quod vide<<222>>.<<331>>\end<<723>>tex2html_deferred<<723>>
+\begin<<724>>tex2html_deferred<<724>>\par\end<<725>>tex2html_deferred<<725>>
+\subsubsection<<223>>Simulate the hardware<<223>>
+\begin<<726>>tex2html_deferred<<726>>\par\end<<727>>tex2html_deferred<<727>>
+If you knew what the compiler and execution stack behavior looked like when a calculation was performed, could you reproduce it in software at need on a different platform?
+\begin<<728>>tex2html_deferred<<728>>\par\end<<729>>tex2html_deferred<<729>>
+Hardware simulation faces some difficulties in the same vein as controlling the stack.  The proposal yields a combinatorial explosion when considering the combinations of hardware chips, compilers, and compiler flags.  Nor is it clear that hardware documentation can be accrued in sufficient quantity and detail to guarantee the success of such a project.
+\begin<<730>>tex2html_deferred<<730>>\par\end<<731>>tex2html_deferred<<731>>
+The Urbit runtime provides an epoch system, meaning that the event log is separated into snapshots and subsequent events \citep<<224>>UrbitEpoch<<224>>.  This is currently used to monitor the use of old binaries which could potentially have a jet mismatch.  It would be moderately straightforward to extend this functionality to record the compilation flags and architecture of that Vere binary, which could be useful in event playback.  However, this remains an unsatisfactory solution because it would lead to Urbit runtime instances intentionally producing different code (rather than a jet mismatch which would require correction).
+\begin<<732>>tex2html_deferred<<732>>\par\end<<733>>tex2html_deferred<<733>>
+\subsubsection<<225>>Support a single hardware platform<<225>>
+\begin<<734>>tex2html_deferred<<734>>\par\end<<735>>tex2html_deferred<<735>>
+A permanent commitment to a single hardware platform—either for the Urbit platform as a whole or for a particular running instance—could solve the determinism problem.  This configuration would be tenable for single-purpose ships with lifetime control (likely moons or comets), but inconvenient for the “hundred-year computer” model touted for planets and superior ranks in Urbit.
+\begin<<736>>tex2html_deferred<<736>>\par\end<<737>>tex2html_deferred<<737>>
+\begin<<226>>quote<<226>>
+Marriage is a fine institution, but I'm not ready for an institution.  (Mae West)
+\end<<227>>quote<<227>>
+\begin<<738>>tex2html_deferred<<738>>\par\end<<739>>tex2html_deferred<<739>>
+To make a lifelong commitment to a particular hardware platform when the lifetime of a deterministic computer is unknown is therefore deemed foolhardy.
+\begin<<740>>tex2html_deferred<<740>>\par\end<<741>>tex2html_deferred<<741>>
+\subsubsection<<228>>Dock floating-point results<<228>>
+\begin<<742>>tex2html_deferred<<742>>\par\end<<743>>tex2html_deferred<<743>>
+What about trimming floating-point values of their least significant bits?  When would this take place—at each step of a multi-step computation?  At the level of single-bit rounding errors, this would potentially work, and amounts to selecting a rounding mode towards even (last digit \texttt<<229>>0<<229>>).  Accrual across multiple calculations could potentially render this unreliable, particularly if different computational paths are supposed to lead to the same result and do not as a result of docking.
+\begin<<744>>tex2html_deferred<<744>>\par\end<<745>>tex2html_deferred<<745>>
+One could also envision docking more than the last bit.  This introduces a step to check and adjust the floating-point value, and in addition breaks IEEE 754 compliance—at which point the trouble of trying to reconcile IEEE 754 with determinism fails.
+\begin<<746>>tex2html_deferred<<746>>\par\end<<747>>tex2html_deferred<<747>>
+In general, we cannot assign a high degree of significance to figures beyond the first few, but accruals across large data sets (such as large language models) can become significant (as attested to by the need for compensated summation).
+\begin<<748>>tex2html_deferred<<748>>\par\end<<749>>tex2html_deferred<<749>>
+A related technique could pack bits of larger floating-point values into smaller ones, but this is functionally a software-defined solution (see, e.g., \citet<<230>>LeBrun2018<<230>>).
+\begin<<750>>tex2html_deferred<<750>>\par\end<<751>>tex2html_deferred<<751>>
+\subsubsection<<231>>Consistency checks<<231>>
+\begin<<752>>tex2html_deferred<<752>>\par\end<<753>>tex2html_deferred<<753>>
+Another option is to compare Nock and jet code for every computation and only accept the C code if it is “correct”.  This immediately runs into a very undesirable characteristic:  every floating-point calculation is run twice, obviating at least one calculation and destroying any efficiency gains from jetting the code.
+\begin<<754>>tex2html_deferred<<754>>\par\end<<755>>tex2html_deferred<<755>>
+One could cache floating-point computations somewhere in the system.\begin<<756>>tex2html_deferred<<756>>\footnote<<332>>Indeed, something like this cache system was employed on Sun SPARC architecture, as discussed in Section \ref<<232>>stored-results<<232>>.<<332>>\end<<757>>tex2html_deferred<<757>>  This is liable to become prohibitively large for systems as every individual FP calculation of all time becomes archived against future need.
+\begin<<758>>tex2html_deferred<<758>>\par\end<<759>>tex2html_deferred<<759>>
+We conclude that, at the current time, naïve hardware-defined floating point is not viable for deterministic systems.
+\begin<<760>>tex2html_deferred<<760>>\par\end<<761>>tex2html_deferred<<761>>
+\subsection<<233>>Software-defined floating-point library<<233>>
+\begin<<762>>tex2html_deferred<<762>>\par\end<<763>>tex2html_deferred<<763>>
+In the absence of a dedicated floating-point unit (FPU) and floating-point assembly instructions, floating-point computations are carried out in software.  The type can be decomposed from bits, operated on, then packed back into the single type of appropriate value.  For instance, prior to the widespread advent of 64-bit consumer hardware, applications running on PC architecture that needed \texttt<<234>>double<<234>> values utilized software emulation using two 32-bit numbers together.
+\begin<<764>>tex2html_deferred<<764>>\par\end<<765>>tex2html_deferred<<765>>
+Urbit's current solution for floating-point computation is to utilize a software-defined floating-point library, the SoftFloat library by \citeauthor<<235>>Hauser2018<<235>>.  SoftFloat is an implementation in software of a subset of IEEE 754 for five floating-point types.\begin<<766>>tex2html_deferred<<766>>\footnote<<333>>“The current release supports five binary formats: 16-bit half-precision, 32-bit single-precision, 64-bit double-precision, 80-bit double-extended-precision, and 128-bit quadruple-precision” \citep<<236>>Hauser2018<<236>>.<<333>>\end<<767>>tex2html_deferred<<767>>  Urbit statically links the library into its runtime binary so it is always available for Nock to utilize as a jet.
+\begin<<768>>tex2html_deferred<<768>>\par\end<<769>>tex2html_deferred<<769>>
+While formally correct, software FP is slower than hardware FP, and likely prohibitively slow for many large matrix applications such as LLMs.  (“Correctness is more important than performance.”)  Performance is the dolorous stroke against software-defined floating point.  (On the other hand, some early versions of the Apple–IBM–Motorola PowerPC RISC architecture did not have dedicated hardware floating-point units (FPUs) or floating-point assembler instructions at all, requiring full software implementation.\begin<<770>>tex2html_deferred<<770>>\footnote<<334>>“There are several 680x0-based Macintosh computers that do not contain floating-point coprocessors” \citep<<237>>Apple1994<<237>>; on the other hand, “floating-point calculations are performed even faster under the … emulator than on a real 680x0-based Macintosh computer,” indicating that optimized software acceleration is possible, modulo chipset versions and tuned libraries.  The PowerPC 601, introduced in 1991, had a native FPU.<<334>>\end<<771>>tex2html_deferred<<771>>)
+\begin<<772>>tex2html_deferred<<772>>\par\end<<773>>tex2html_deferred<<773>>
+An optimized portable deterministic software library for floating-point calculations may be a sufficiently fast solution to meet Urbit's needs even for vector computations.  A different avenue worthy of investigation is to take IEEE 754 compliant floating-point values as inputs and outputs, then transform into a local representation for an optimized portable deterministic calculation.  For instance, \citet<<238>>Thall2007<<238>> presents the concept of “unevaluated sums”, a generalized technique for accruing error in situations where additional precision is necessary for accuracy.  However, even with an agreed-upon standard library like SoftFloat, it is important to keep in mind that exact floating-point results for transcendental functions are still not correctly known in many cases.\begin<<774>>tex2html_deferred<<774>>\footnote<<335>>To correctly calculate a trigonometric function for \texttt<<239>>double<<239>> may take over a hundred bits of precision before correct rounding can be determined.  Furthermore, the C \texttt<<240>>math.h<<240>> implementation of \begin<<430>>tex2html_wrap_inline<<430>>$\sin$\end<<431>>tex2html_wrap_inline<<431>>\space may or may not use \texttt<<241>>fsin<<241>>.<<335>>\end<<775>>tex2html_deferred<<775>>  This particular poses a problem for functions like \begin<<432>>tex2html_wrap_inline<<432>>$\sin$\end<<433>>tex2html_wrap_inline<<433>>\space which may be calculated by different routes in Hoon/Nock and in C/Rust.  For the time being, we conclude that Urbit's discipline requires only using Hoon/Nock implementations of transcendental functions.
+\begin<<776>>tex2html_deferred<<776>>\par\end<<777>>tex2html_deferred<<777>>
+\subsection<<242>>Opaque calculations<<242>>
+\begin<<778>>tex2html_deferred<<778>>\par\end<<779>>tex2html_deferred<<779>>
+When a request for data is made over the network, one is not certain what the resulting data will be.  Their value is epistemically opaque.  In Urbit's event log, the results of network calls are persisted as effects in the modified state (for successful events).
+\begin<<780>>tex2html_deferred<<780>>\par\end<<781>>tex2html_deferred<<781>>
+What if Urbit treated a call that had a floating-point computation as if it were a network call, that is, as if it were a referentially opaque injection into Urbit's state?  One difference is that network calls result as side effects from hints to the runtime which then handles the plumbing, as it were, and injects the resulting \texttt<<243>>gift<<243>> task back into Arvo as if a \emph<<244>>deus ex machina<<244>>, from Arvo's perspective.  (It should of course know how to handle such a contingency.)  There are two main objections that can be made here:
+\begin<<782>>tex2html_deferred<<782>>\par\end<<783>>tex2html_deferred<<783>>
+\begin<<245>>enumerate<<245>>
+  \item  From the programmer's standpoint, every floating-point computation would need to be bundled as if it were a network call, and the result treated as if it were a new move passed back into the kernel.  This destroys synchronicity and changes floating-point computations from lightweight programmer choices into heavy and occasional calls.
+\begin<<784>>tex2html_deferred<<784>>\par\end<<785>>tex2html_deferred<<785>>
+\item  The storage of every result of every floating-point computation could become prohibitively large.  Work on large matrices in numerical analysis or machine learning could rapidly balloon the event log since every intermediate state would also become part of the ship's immutable history.
+\end<<246>>enumerate<<246>>
+\begin<<786>>tex2html_deferred<<786>>\par\end<<787>>tex2html_deferred<<787>>
+To the first objection, we can point to the current design pattern utilized in scrying (or the request for values from the bound scry namespace).  Local scry values (such as values exposed by a system service or vane) are accessed synchronously using the <tex2html_verblst_mark>9<tex2html_verb_mark>gifts to be processed in another part of the vane or application.
+\begin<<788>>tex2html_deferred<<788>>\par\end<<789>>tex2html_deferred<<789>>
+To the second, we observe that although Urbit is a state machine whose history is part of its state, in practice we can mitigate event log growth by either \emph<<247>>chopping<<247>> the event log by storing its state and permitting replay forward from that point or \emph<<248>>tombstoning<<248>> data which should never be available again.\begin<<790>>tex2html_deferred<<790>>\footnote<<249>>The memory implications of these are not necessary here, but take place in different arenas:  the runtime versus the Arvo noun arena.<<249>>\end<<791>>tex2html_deferred<<791>>
+\begin<<792>>tex2html_deferred<<792>>\par\end<<793>>tex2html_deferred<<793>>
+In this proposal, however, one could imagine a situation like that which obtains in scrying:  fast software implementation treated synchronously, slow hardware acceleration treated asynchronously.
+\begin<<794>>tex2html_deferred<<794>>\par\end<<795>>tex2html_deferred<<795>>
+\subsection<<250>>Stored results<<250>>
+\label<<251>>stored-results<<251>>
+\begin<<796>>tex2html_deferred<<796>>\par\end<<797>>tex2html_deferred<<797>>
+Instead of repeating computations that have been made in the past, what if we cached the result of all of them, so that any new computations with the same values are guaranteed to result in the same value via a cache lookup instead of a calculation?  Urbit uses memoization frequently in Arvo and in the runtime, so this is an aesthetically compatible option; we consider its feasibility.
+\begin<<798>>tex2html_deferred<<798>>\par\end<<799>>tex2html_deferred<<799>>
+\begin<<252>>quote<<252>>
+A recently proposed hardware acceleration technique is to store the results of previous multiplication and division operations in a cache, reusing rather than recalculating the result whenever possible. (Dynamic profiling has found that a high percentage of these operations share the same operands as previous operations.)  \citep[p.~1148]<<253>>Jones2008<<253>>\begin<<800>>tex2html_deferred<<800>>\footnote<<336>>Cf. Jones' citation of \citeauthor<<254>>Citron1998<<254>><<336>>\end<<801>>tex2html_deferred<<801>> <tex2html_comment_mark>19
+\end<<255>>quote<<255>>
+\begin<<802>>tex2html_deferred<<802>>\par\end<<803>>tex2html_deferred<<803>>
+On Urbit, this introduces an \begin<<434>>tex2html_wrap_inline<<434>>$O(1)$\end<<435>>tex2html_wrap_inline<<435>>\space average-case/\begin<<436>>tex2html_wrap_inline<<436>>$O(n)$\end<<437>>tex2html_wrap_inline<<437>>\space worst-case cache lookup from a MurmurHash3 hash key calculation (what Urbit calls a <tex2html_verblst_mark>10<tex2html_verb_mark>Kahan1997.\begin<<804>>tex2html_deferred<<804>>\footnote<<256>>What constitutes “suspicion” is only sparsely elaborated by Kahan in that article.<<256>>\end<<805>>tex2html_deferred<<805>>  Sun implemented this in SPARC for “retrospective diagnostics” but the technique could allow a more lapidary operation for Urbit.  (Follow-on considerations include whether such computations should now be considered “bound” in a sense like that of the scry namespace.)
+\begin<<806>>tex2html_deferred<<806>>\par\end<<807>>tex2html_deferred<<807>>
+\subsection<<257>>Proscribing IEEE 754<<257>>
+\begin<<808>>tex2html_deferred<<808>>\par\end<<809>>tex2html_deferred<<809>>
+What if the Scylla of IEEE 754 is avoided for some other Charybdis?  We can approach this solution space at two levels:  either by sector or entirely.
+\begin<<810>>tex2html_deferred<<810>>\par\end<<811>>tex2html_deferred<<811>>
+\paragraph<<258>>Proscribe by sector.<<258>>
+\begin<<812>>tex2html_deferred<<812>>\par\end<<813>>tex2html_deferred<<813>>
+One solution to the speed-vs.-reproducibility dilemma is to permit hardware-accelerated IEEE 754 operations, but only in a verified subset permissible for jets.  This would require careful vetting of the hardware stack and compiler options to define a permissible subset of IEEE 754 operations as “known good”.  Coupled with the epoch system, it may be a feasible solution.
+\begin<<814>>tex2html_deferred<<814>>\par\end<<815>>tex2html_deferred<<815>>
+What degree of vetting will reliably answer the gap between IEEE 754 and hardware implementation for any particular operation?  \citet[pp.~330ff.]<<259>>Jones2008<<259>> and \citet<<260>>Goldberg1991<<260>> provide a careful analysis of accuracy errors inherent to IEEE 754 as a standard, but due to the variety of possible scenarios do not treat of real compilers and chipsets much.\begin<<816>>tex2html_deferred<<816>>\footnote<<337>>See particularly the note on “Common Implementations” on p.~346 of \citet<<261>>Jones2008<<261>>.<<337>>\end<<817>>tex2html_deferred<<817>>  Trivially, as demonstrated above in the Python example, \begin<<438>>tex2html_wrap_inline<<438>>$(a + b) + c \neq a + (b + c)$\end<<439>>tex2html_wrap_inline<<439>>, and even modest reordering of operations by a zealous compiler optimization is susceptible of introducing nonportable and thus nondeterministic (in our sense) behavior.
+\begin<<818>>tex2html_deferred<<818>>\par\end<<819>>tex2html_deferred<<819>>
+Having identified an appropriate subset of operations, we may imagine that the use of \texttt<<262>>\#ifdef<<262>>, Autotools’ \texttt<<263>>configure<<263>>, and a jetting library may answer to our need.  Any jet library would have to be carefully constructed to avoid imposing tight discipline directly on the end user (modal Hoon author).  We cannot recommend this path today but do not consider the way to be shut, especially given liberal use of \texttt<<264>>volatile<<264>>.
+\begin<<820>>tex2html_deferred<<820>>\par\end<<821>>tex2html_deferred<<821>>
+In particular, fused multiply-add operations are subject to reordering by an optimizing compiler.  Avoiding these would require some discipline on the part of the jet developer, since code that does not explicitly \texttt<<265>>fma<<265>> may yet reduce to it in a compiler pass.  A jetting library would be advantageous in this case.
+\begin<<822>>tex2html_deferred<<822>>\par\end<<823>>tex2html_deferred<<823>>
+As an example of a refactoring of IEEE 754 operations for determinism, consider the \texttt<<266>>ReproBLAS<<266>> project (last update \textasciitilde 2016.2.21).   \texttt<<267>>ReproBLAS<<267>> seeks to produce a set of reproducible deterministic algorithms reflecting the standard operations of BLAS \citep<<268>>ReproBLAS<<268>>.  It accomplishes this by introducing a binned data type and a set of basic operations carefully built on IEEE 754 for the objective of completely portable reproducibility.\begin<<824>>tex2html_deferred<<824>>\footnote<<338>>“Using our default settings, reproducibly summing \begin<<440>>tex2html_wrap_inline<<440>>$n$\end<<441>>tex2html_wrap_inline<<441>>\space floating point types requires approximately \begin<<442>>tex2html_wrap_inline<<442>>$9n$\end<<443>>tex2html_wrap_inline<<443>>\space floating point operations (arithmetic, comparison, and absolute value). In theory, this count can be reduced to 5n using the new ;SPMquot;augmented addition;SPMquot; and ;SPMquot;maximum magnitude;SPMquot; instructions in the proposed IEEE Floating Point Standard 754-2018.”  \citep<<269>>ReproBLAS<<269>><<338>>\end<<825>>tex2html_deferred<<825>>  This is similar to our proposal for a vetted jetting library and may be worth attention, particularly in association with requirements around \texttt<<270>>-O0<<270>>.
+\begin<<826>>tex2html_deferred<<826>>\par\end<<827>>tex2html_deferred<<827>>
+\paragraph<<271>>Proscribe by replacement.<<271>>
+\begin<<828>>tex2html_deferred<<828>>\par\end<<829>>tex2html_deferred<<829>>
+Finally, we face the possibility of jettisoning decades of floating-point libraries entirely and forging a new trail.  We explicitly omit attempting to implement a new standard as hubristic, but would like to explore some alternatives.
+\begin<<830>>tex2html_deferred<<830>>\par\end<<831>>tex2html_deferred<<831>>
+\subparagraph<<272>>Posits.<<272>>
+\begin<<832>>tex2html_deferred<<832>>\par\end<<833>>tex2html_deferred<<833>>
+In 2015, John Gustafson proposed a new standard for representing values drawn from \begin<<444>>tex2html_wrap_inline<<444>>$\mathbb<<273>>R<<273>>$\end<<445>>tex2html_wrap_inline<<445>>\space called universal numbers or unums \citep<<274>>Gustafson2015, Gustafson2017, Gustafson2017a, Posit2022<<274>>.  The current version of unums, called posits, supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
+\begin<<834>>tex2html_deferred<<834>>\par\end<<835>>tex2html_deferred<<835>>
+Gustafson's criticisms of IEEE 754 focused on determinism and exactness; underflow and overflow; fixed bit widths for mantissa and exponent; rounding; and the large wasted block of NaNs \citep<<275>>Risse2016<<275>>.  Unums likewise must provide sign, exponent with bias, and significand; they additionally signal whether the value is an interval.  Unlike IEEE 754's use of multiple bit widths, 32-bit posits are argued to be sufficient for almost all applications.
+\begin<<836>>tex2html_deferred<<836>>\par\end<<837>>tex2html_deferred<<837>>
+\citep<<276>>Gustafson2015<<276>>
+\citep<<277>>Gustafson2017<<277>>
+\citep<<278>>Posit2022<<278>>
+\citep<<279>>Risse2016<<279>>
+\begin<<838>>tex2html_deferred<<838>>\par\end<<839>>tex2html_deferred<<839>>
+A unum/posit implementation for Urbit would be as straightforward as the implementation of IEEE 754.  For jetting, there is a software library for posits called SoftPosit based on the SoftFloat library \citep<<280>>Cerlane2018<<280>>.  A number of other software implementations exist, but at the time of writing no hardware support has been noted.  (Since there are no hardware implementations, the effect of optimizations on determinism cannot yet be assessed; it is presumed that the situation will be better than IEEE 754 given the advantages of a clean slate.)
+\begin<<840>>tex2html_deferred<<840>>\par\end<<841>>tex2html_deferred<<841>>
+\subparagraph<<339>>Hand-rolled \texttt<<281>>float<<281>>s.<<339>>
+\begin<<842>>tex2html_deferred<<842>>\par\end<<843>>tex2html_deferred<<843>>
+If IEEE 754 presents too many difficulties to be viable at high speed, then hand-rolling a custom hybrid hardware–software scheme via bitmasking could be attractive.  This returns to the more “Wild West” days before IEEE 754's introduction, but is presaged by the recent introduction of \texttt<<282>>bfloat16<<282>>, \texttt<<283>>TensorFlow-32<<283>>, and other types designed for machine learning applications.  Without access to hardware manufacturers, however, this amounts in the end to software-defined floating point and seems unlikely to be competitive speedwise.  (We cite the idea put forth previously in this article to convert to an intermediate representation for computation, yielding IEEE 754 as necessary.)
+\begin<<844>>tex2html_deferred<<844>>\par\end<<845>>tex2html_deferred<<845>>
+It may also be worth considering the use of a 3-tuple of sign, exponent, and significand (with only software jetting), and leave details of jet implementation to library authors.
+\begin<<846>>tex2html_deferred<<846>>\par\end<<847>>tex2html_deferred<<847>>
+\subparagraph<<340>>Fixed-point and \begin<<446>>tex2html_wrap_inline<<446>>$\mathbb<<284>>Q<<284>>$\end<<447>>tex2html_wrap_inline<<447>>.<<340>>
+\begin<<848>>tex2html_deferred<<848>>\par\end<<849>>tex2html_deferred<<849>>
+A fixed-point representation differs from a floating-point scheme in that the exponent is fixed by the protocol or metadata and thus only the sign and significand need be included in the bit representation.  (With an offset, even the sign can be elided.)  The advantage of such a scheme is that it affords the benefits of floating-point mathematics at near-integer operation speeds (e.g. left-shift to multiply by two).  One disadvantage is that there is a smallest representable value; this lack of subnormals requires either an underflow handler or the possibility of inadvertent division by zero.  Fixed-point operations could also be used as intermediates in calculations.  (This echoes once again the idea of conversion to an intermediate representation then conversion back out to IEEE 754.)\begin<<850>>tex2html_deferred<<850>>\footnote<<341>>“One solution to implementing floating-point types on processors that support fixed-point types is to
+convert the source containing floating-point data operations to make calls to a fixed-point library” \citep[p.~346]<<285>>Jones2008<<285>>.  Note that the sense of our current interest is reversed.<<341>>\end<<851>>tex2html_deferred<<851>>
+\begin<<852>>tex2html_deferred<<852>>\par\end<<853>>tex2html_deferred<<853>>
+If a rational number scheme is implemented, then a variety of possible implementations are possible, ranging from bitpacked fixed-width integers to pairs of arbitrary-width integers.  Reduction to “simplest” values introduces some overhead; fractions are formally an ordered pair \begin<<448>>tex2html_wrap_inline<<448>>$(a, b)$\end<<449>>tex2html_wrap_inline<<449>>\space with \begin<<450>>tex2html_wrap_inline<<450>>$b \neq 0$\end<<451>>tex2html_wrap_inline<<451>>, but there is an equivalence class of multiples.  (That is, if we write \begin<<452>>tex2html_wrap_inline<<452>>$\frac<<286>>1<<286>><<287>>2<<287>>$\end<<453>>tex2html_wrap_inline<<453>>\space as \begin<<454>>tex2html_wrap_inline<<454>>$(1, 2)$\end<<455>>tex2html_wrap_inline<<455>>, we have also to consider \begin<<456>>tex2html_wrap_inline<<456>>$(2, 4)$\end<<457>>tex2html_wrap_inline<<457>>, \begin<<458>>tex2html_wrap_inline<<458>>$(3, 6)$\end<<459>>tex2html_wrap_inline<<459>>, indeed an infinite sequence of such ordered pairs.)  Rational numbers are a superset of floating-point numbers and fixed-point numbers, but accrue processing overhead due to dereferencing arbitrary integers and other aspects of computation on operations.
+\begin<<854>>tex2html_deferred<<854>>\par\end<<855>>tex2html_deferred<<855>>
+However, deviation from the proscription scheme, even inadvertently, would mean that a ship is considered invalid in a sense equivalent to double-booting or breaking the scry namespace.  This option is deemed worth investigation, likely viable, but bearing unknown risks.
+\begin<<856>>tex2html_deferred<<856>>\par\end<<857>>tex2html_deferred<<857>>
+\subsection<<288>>Irregularities<<288>>
+\begin<<858>>tex2html_deferred<<858>>\par\end<<859>>tex2html_deferred<<859>>
+Any approach to modeling real numbers runs the risk that different calculation pathways will yield a different kind of inexactness in the result.  These can be mitigated by some of the approaches suggested above, and also by checking the correspondence of the Hoon code and the underlying jet, particular for known edge cases in behavior.  While Hoon–jet compliance is an open research problem,\begin<<860>>tex2html_deferred<<860>>\footnote<<289>>Particularly as regards co-generation of Hoon and C/Rust, or formal proofs.<<289>>\end<<861>>tex2html_deferred<<861>> we can apply principles of unit testing together with a period of testing Nock and jet compliance.\begin<<862>>tex2html_deferred<<862>>\footnote<<290>>The Vere runtime supports a debugging flag which runs both the Nock and the jet and checks for identical results.<<290>>\end<<863>>tex2html_deferred<<863>>
+\begin<<864>>tex2html_deferred<<864>>\par\end<<865>>tex2html_deferred<<865>>
+Jet mismatches have been rare in the current era.\begin<<866>>tex2html_deferred<<866>>\footnote<<342>>By “current era”, we mean after the last global network breach in \textasciitilde 2020.12 \citep<<291>>UrbitBreach<<291>>.<<342>>\end<<867>>tex2html_deferred<<867>>  Some jet “mismatches” occur because the runtime raises a different error than the corresponding Hoon—these are relatively innocuous.  Others may occur because actually different results are produced for different input.  These are grave, and ultimately motivated the introduction of the epoch system so that event log replays can take into account the previous less-perfect jet version in the runtime \citep<<292>>UrbitEpoch<<292>>.
+\begin<<868>>tex2html_deferred<<868>>\par\end<<869>>tex2html_deferred<<869>>
+\section<<293>>Linear Algebra in Hoon<<293>>
+\begin<<870>>tex2html_deferred<<870>>\par\end<<871>>tex2html_deferred<<871>>
+Lagoon\begin<<872>>tex2html_deferred<<872>>\footnote<<294>>Linear AlGebra in hOON<<294>>\end<<873>>tex2html_deferred<<873>> is an Urbit library to facilitate Hoon-native mathematical operations.  It envisions six native types,
+\begin<<874>>tex2html_deferred<<874>>\par\end<<875>>tex2html_deferred<<875>>
+\begin<<295>>enumerate<<295>>
+  \item  <tex2html_verb_mark>12<tex2html_verb_mark><tex2html_comment_mark>25
+\item  <tex2html_verb_mark>14<tex2html_verb_mark><tex2html_comment_mark>27
+\item  <tex2html_verb_mark>16<tex2html_verb_mark><tex2html_comment_mark>29
+\end<<296>>enumerate<<296>>
+\begin<<876>>tex2html_deferred<<876>>\par\end<<877>>tex2html_deferred<<877>>
+\noindent
+for which <tex2html_verb_mark>18<tex2html_verb_mark><tex2html_comment_mark>
+\begin<<878>>tex2html_deferred<<878>>\par\end<<879>>tex2html_deferred<<879>>
+Lagoon has passed through several implementations and remains in active development.  The current implementation is the \texttt<<297>>lagoon<<297>> branch of the \texttt<<298>>urbit/urbit<<298>> repository \citep<<299>>Urbit<<299>>.
+\begin<<880>>tex2html_deferred<<880>>\par\end<<881>>tex2html_deferred<<881>>
+\section<<300>>Conclusion<<300>>
+\begin<<882>>tex2html_deferred<<882>>\par\end<<883>>tex2html_deferred<<883>>
+To summarize, the most promising solutions for floating-point mathematics on Urbit per the above analysis include:
+\begin<<884>>tex2html_deferred<<884>>\par\end<<885>>tex2html_deferred<<885>>
+\begin<<301>>enumerate<<301>>
+  \item  Hardware FP on single machine for entire lifetime.
+  \item  Optimized software FP with vetted jetting library.
+  \item  Opaque calculation as callback.
+  \item  Cached results by callsite.
+  \item  Utilizing a subset of IEEE 754 in hardware.
+  \item  Replacing IEEE 754 with another approach of sufficient speed, fixed-point and unum/posits chief among these.
+\end<<302>>enumerate<<302>>
+\begin<<886>>tex2html_deferred<<886>>\par\end<<887>>tex2html_deferred<<887>>
+Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.\begin<<888>>tex2html_deferred<<888>>\footnote<<343>>UWasm or UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep<<303>>UWasm<<303>> (see e.g. \citet<<304>>KloudKoder2022<<304>> for a discussion of the issues involved); \texttt<<305>>lazytrig<<305>>, which is slow and implemented purely in Hoon (Nock); Lagoon, which includes IEEE 754 operations with its linear algebra library (\emph<<306>>q.v.<<306>>); and MNIST.<<343>>\end<<889>>tex2html_deferred<<889>>  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics. \tombstone<<307>><<307>>
+\begin<<890>>tex2html_deferred<<890>>\par\end<<891>>tex2html_deferred<<891>>
+\printbibliography
+\end<<308>>document<<308>>

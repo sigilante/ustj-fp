@@ -1,0 +1,17 @@
+
+<H5><A ID="SECTION00031033000000000000">
+Inexact implementation.</A>
+</H5>
+
+<P>
+Failure to implement IEEE 754 correctly may happen inadvertently, as with the Pentium FDIV bug in the 1990s <#129#>Edelman1997<#129#>.  Alternatively, chipset designers may deviate from the specification for reasons of performance or limitations in the architecture.
+
+<P>
+For instance, IEEE 754 defines a range of numbers as “not-a-number” values, or NaNs.  Per the specification, a NaN can be a signalling NaN, meaning that it intends to flag and possibly disrupt a problematic computation;<A ID="tex2html19"
+  HREF="footnode.html#foot323"><SUP><SPAN CLASS="arabic">18</SPAN></SUP></A> or a quiet NaN, which does not raise such an exception and merely yields a result with the NaN propagated to the final result.<A ID="tex2html20"
+  HREF="footnode.html#foot131"><SUP><SPAN CLASS="arabic">19</SPAN></SUP></A>  Not all processors implement this part of IEEE 754 correctly:  “The Motorola DSP563CCC does not support NaNs or infinities.  Floating-point arithmetic operations do not overflow to infinity; they saturate at the maximum representable value” [p.~338]<#132#>Jones2008<#132#>.
+
+<P>
+As a further example, fused multiply-add (FMA) (<tex2html_verbatim_mark>#math43#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline394#</SPAN>) is implemented on certain hardware to favor <SPAN  CLASS="texttt">double</SPAN> operations and not quadruple-precision operations [p.~5]<#134#>Kahan1997<#134#>.
+
+<P>

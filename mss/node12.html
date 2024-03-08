@@ -1,0 +1,29 @@
+
+<H4><A ID="SECTION00031040000000000000">
+Rounding mode.</A>
+</H4>
+
+<P>
+IEEE 754 floating-point operations take place using one of four rounding modes.
+
+<P>
+
+<OL>
+<LI>Round to nearest, ties to even.  Set ties to the last bit as zero (even).  The default.
+</LI>
+<LI>Round to zero.  Truncate, effectively rounding positive numbers down and negative numbers up.
+</LI>
+<LI>Round toward positive infinity.  Up regardless of sign.
+</LI>
+<LI>Round toward negative infinity.  Down regardless of sign.
+</LI>
+</OL>
+
+<P>
+
+The rounding mode can affect the result of computations, and if other processes are changing the mode (which can even be set per-thread), results may not be reliably reproducible.
+
+<P>
+“Obtaining the correctly rounded result of an addition or subtraction operation requires an additional bit in the significand (as provided by the IEC 60559 guard bit) to hold the intermediate result” [p.~65]<#139#>Jones2008<#139#>.
+
+<P>

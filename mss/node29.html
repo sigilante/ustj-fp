@@ -1,0 +1,15 @@
+
+<H5><A ID="SECTION00055023000000000000">
+Fixed-point and <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline446#</SPAN>.</A>
+</H5>
+
+<P>
+A fixed-point representation differs from a floating-point scheme in that the exponent is fixed by the protocol or metadata and thus only the sign and significand need be included in the bit representation.  (With an offset, even the sign can be elided.)  The advantage of such a scheme is that it affords the benefits of floating-point mathematics at near-integer operation speeds (e.g. left-shift to multiply by two).  One disadvantage is that there is a smallest representable value; this lack of subnormals requires either an underflow handler or the possibility of inadvertent division by zero.  Fixed-point operations could also be used as intermediates in calculations.  (This echoes once again the idea of conversion to an intermediate representation then conversion back out to IEEE 754.)<A ID="tex2html41"
+  HREF="footnode.html#foot341"><SUP><SPAN CLASS="arabic">40</SPAN></SUP></A>
+<P>
+If a rational number scheme is implemented, then a variety of possible implementations are possible, ranging from bitpacked fixed-width integers to pairs of arbitrary-width integers.  Reduction to “simplest” values introduces some overhead; fractions are formally an ordered pair <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline448#</SPAN> with <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline450#</SPAN>, but there is an equivalence class of multiples.  (That is, if we write <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline452#</SPAN> as <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline454#</SPAN>, we have also to consider <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline456#</SPAN>, <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline458#</SPAN>, indeed an infinite sequence of such ordered pairs.)  Rational numbers are a superset of floating-point numbers and fixed-point numbers, but accrue processing overhead due to dereferencing arbitrary integers and other aspects of computation on operations.
+
+<P>
+However, deviation from the proscription scheme, even inadvertently, would mean that a ship is considered invalid in a sense equivalent to double-booting or breaking the scry namespace.  This option is deemed worth investigation, likely viable, but bearing unknown risks.
+
+<P>

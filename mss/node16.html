@@ -1,0 +1,28 @@
+
+<H3><A ID="SECTION00051100000000000000">
+Control the stack</A>
+</H3>
+
+<P>
+If you controlled the compiler and runtime execution stack to a sufficient degree, could you yield deterministic floating-point arithmetic from the hardware?  “A translator that generates very high performance code is of no use if the final behavior is incorrect” [p.~189]<#198#>Jones2008<#198#>; that is, optimizations often come at the cost of correctness.
+
+<P>
+To start off, what must be considered part of the stack in this sense?  At a minimum, the compiler and linker toolchain (including flags and options) and the actual runtime must be included.  (This explicitly introduces a dependence between Martian software and Earthling software, repugnant to the Urbit ethos.)
+
+<P>
+We also must decide what the target is.  Do we aim for the most portable configuration (as determined by number of consumer or enterprise users)?  Do we aim for the “closest” to IEEE 754 adherence?  Do we aim for simplicity, or compilation speed, or any of a half-dozen other optimizable variables?
+
+<P>
+For instance, suppose that one intended to use the C keyword <SPAN  CLASS="texttt">volatile</SPAN> to block certain common optimizations on a floating-point value.<A ID="tex2html28"
+  HREF="footnode.html#foot328"><SUP><SPAN CLASS="arabic">27</SPAN></SUP></A>  The runtime at the level of Nock does not know if a value is considered floating-point or not.  At the level of a jet, the use of <SPAN  CLASS="texttt">volatile</SPAN> can correctly bar certain hardware optimizations, but these need to be carefully enumerated and understood in the light of the other toolchain concerns enumerated in this section.  Strictly speaking, <SPAN  CLASS="texttt">volatile</SPAN> only seeks to guarantee that stale calculations are not inadvertently reused due to optimization.  Without hardware optimization, the utility of an FLU for fast floating-point computations is questionable.  The risk of a jet mismatch remains high, as does a nonportable jet.<A ID="tex2html29"
+  HREF="footnode.html#foot329"><SUP><SPAN CLASS="arabic">28</SPAN></SUP></A>
+<P>
+Can the C-defined floating-point environment (as supplied by <SPAN  CLASS="texttt">fenv.h</SPAN>) answer to this need?  This affords the ability to specify not only rounding modes and access floating-point exception status flags, but it is not clear whether this environmental control portably spans the entire output of floating-point computations.<A ID="tex2html30"
+  HREF="footnode.html#foot330"><SUP><SPAN CLASS="arabic">29</SPAN></SUP></A>
+<P>
+Finally, “[a]n implementation is not required to provide a facility for altering the modes for translation-time arithmetic, or for making exception flags from the translation available to the executing program” [p.~200]<#221#>Jones2008<#221#>.  The information we purport to gain by controlling the stack in the manner above outlined is possibly not even available to the compiler and the runtime executable.
+
+<P>
+We suggest that deterministically correct stack control in the sense we have described here is impossible for an arbitrary configuration of the modern hardware stack.<A ID="tex2html31"
+  HREF="footnode.html#foot331"><SUP><SPAN CLASS="arabic">30</SPAN></SUP></A>
+<P>

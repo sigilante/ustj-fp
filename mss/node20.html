@@ -1,0 +1,16 @@
+
+<H3><A ID="SECTION00051500000000000000">
+Consistency checks</A>
+</H3>
+
+<P>
+Another option is to compare Nock and jet code for every computation and only accept the C code if it is “correct”.  This immediately runs into a very undesirable characteristic:  every floating-point calculation is run twice, obviating at least one calculation and destroying any efficiency gains from jetting the code.
+
+<P>
+One could cache floating-point computations somewhere in the system.<A ID="tex2html32"
+  HREF="footnode.html#foot332"><SUP><SPAN CLASS="arabic">31</SPAN></SUP></A>  This is liable to become prohibitively large for systems as every individual FP calculation of all time becomes archived against future need.
+
+<P>
+We conclude that, at the current time, naïve hardware-defined floating point is not viable for deterministic systems.
+
+<P>

@@ -1,0 +1,14 @@
+
+<H2><A ID="SECTION00056000000000000000">
+Irregularities</A>
+</H2>
+
+<P>
+Any approach to modeling real numbers runs the risk that different calculation pathways will yield a different kind of inexactness in the result.  These can be mitigated by some of the approaches suggested above, and also by checking the correspondence of the Hoon code and the underlying jet, particular for known edge cases in behavior.  While Hoon–jet compliance is an open research problem,<A ID="tex2html42"
+  HREF="footnode.html#foot289"><SUP><SPAN CLASS="arabic">41</SPAN></SUP></A> we can apply principles of unit testing together with a period of testing Nock and jet compliance.<A ID="tex2html43"
+  HREF="footnode.html#foot290"><SUP><SPAN CLASS="arabic">42</SPAN></SUP></A>
+<P>
+Jet mismatches have been rare in the current era.<A ID="tex2html44"
+  HREF="footnode.html#foot342"><SUP><SPAN CLASS="arabic">43</SPAN></SUP></A>  Some jet “mismatches” occur because the runtime raises a different error than the corresponding Hoon—these are relatively innocuous.  Others may occur because actually different results are produced for different input.  These are grave, and ultimately motivated the introduction of the epoch system so that event log replays can take into account the previous less-perfect jet version in the runtime <#292#>UrbitEpoch<#292#>.
+
+<P>

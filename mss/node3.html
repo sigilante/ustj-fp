@@ -1,0 +1,170 @@
+<!DOCTYPE HTML>
+
+<!--Converted with LaTeX2HTML 2021.2 (Released July 1, 2021) -->
+<HTML lang="en">
+<HEAD>
+<TITLE>A Derivation of the Real Numbers</TITLE>
+<META NAME="description" CONTENT="A Derivation of the Real Numbers">
+<META NAME="keywords" CONTENT="mss">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<META NAME="Generator" CONTENT="LaTeX2HTML v2021.2">
+
+<LINK REL="STYLESHEET" HREF="mss.css">
+
+<LINK REL="next" HREF="node13.html">
+<LINK REL="previous" HREF="node2.html">
+<LINK REL="next" HREF="node4.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A
+ HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALT="next" SRC="next.png"></A> 
+<A
+ HREF="mss.html">
+<IMG WIDTH="26" HEIGHT="24" ALT="up" SRC="up.png"></A> 
+<A
+ HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALT="previous" SRC="prev.png"></A> 
+<A ID="tex2html91"
+  HREF="node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALT="contents" SRC="contents.png"></A>  
+<BR>
+<B> Next:</B> <A
+ HREF="node4.html">IEEE 754 Basics</A>
+<B> Up:</B> <A
+ HREF="mss.html">The Desert of the</A>
+<B> Previous:</B> <A
+ HREF="node2.html">Introduction</A>
+ &nbsp; <B>  <A ID="tex2html92"
+  HREF="node1.html">Contents</A></B> 
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+
+<H1><A ID="SECTION00030000000000000000">
+A Derivation of the Real Numbers</A>
+</H1>
+
+<P>
+Binary computer values are at root easily represented as non-negative integers.  However, it is frequently convenient when working with human applications to either use other numeric bases (notably decimal and hexadecimal) or to permit non-integer mathematics.
+
+<P>
+In the historical development of mathematics, logical problems in each set of numbers drove the discovery and elaboration of more elaborate algebras.  For instance, in the field of natural numbers <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img1.svg"
+ ALT="$\mathbb{N}$"></SPAN>, the operation of addition (<SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img2.svg"
+ ALT="$+$"></SPAN>) or multiplication (<SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img3.svg"
+ ALT="$\times$"></SPAN>) produces a value within the set; however, permitting subtraction (<SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img4.svg"
+ ALT="$-$"></SPAN>) of a larger number from a smaller number can result in a value inexpressible in <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img1.svg"
+ ALT="$\mathbb{N}$"></SPAN>.  This motivated the introduction of the integers <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img5.svg"
+ ALT="$\mathbb{Z}$"></SPAN>, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division (<SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img6.svg"
+ ALT="$/$"></SPAN>) similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean<A ID="tex2html4"
+  HREF="footnode.html#foot30"><SUP><SPAN CLASS="arabic">4</SPAN></SUP></A> innovation of the rational numbers or fractions as a class <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img7.svg"
+ ALT="$\mathbb{Q}$"></SPAN>.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the set of real numbers.  The set of real numbers, denoted by <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img8.svg"
+ ALT="$\mathbb{R}$"></SPAN>, is characterized by its continuity, implying that for any two distinct values within this set, there exists a difference, no matter how small.
+
+<P>
+Since the operations and conventions of <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img8.svg"
+ ALT="$\mathbb{R}$"></SPAN> have been found to be so useful, it is desirable to extend the semantics to computer programming.  However, digital computers, by virtue of their binary representation, effectively use natural numbers <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img1.svg"
+ ALT="$\mathbb{N}$"></SPAN> to represent numbers (to the limit of memory rather than positive infinity <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img9.svg"
+ ALT="$+\infty$"></SPAN>).  Several schemes permit a computer integer to be interpreted as if it were a number with a fractional part, including a scaling factor, fixed-point representation,<A ID="tex2html5"
+  HREF="footnode.html#foot312"><SUP><SPAN CLASS="arabic">5</SPAN></SUP></A> and floating-point representations.
+
+<P>
+The basic concept of floating point arithmetic is that it permits the representation of a discrete subset of <SPAN CLASS="MATH"><IMG
+ STYLE=""
+ SRC="img8.svg"
+ ALT="$\mathbb{R}$"></SPAN> by composing a significand, a base, and an exponent.  The significand is the set of significant digits, possibly including the sign; the base is the understood number base (typically 2); and the exponent is the power to which that base is put before multiplying by the significand to yield the result.<A ID="tex2html6"
+  HREF="footnode.html#foot313"><SUP><SPAN CLASS="arabic">6</SPAN></SUP></A>  The most ubiquitous floating-point format in use today is defined by the IEEE 754 standard, but certain hardware platforms such as GPUs utilize alternative floating-point arithmetic representations.<A ID="tex2html7"
+  HREF="footnode.html#foot314"><SUP><SPAN CLASS="arabic">7</SPAN></SUP></A>
+<P>
+To summarize, given an abstract description of a floating point system, there are several practical implementations that can be derived.  We need to specify at least four quantities:  sign,<A ID="tex2html8"
+  HREF="footnode.html#foot42"><SUP><SPAN CLASS="arabic">8</SPAN></SUP></A> significand, base, and exponent.<A ID="tex2html9"
+  HREF="footnode.html#foot43"><SUP><SPAN CLASS="arabic">9</SPAN></SUP></A>  The base is presumably fixed by the protocol, leaving three free values for the implementation to economically encode.
+
+<P>
+<BR><HR>
+<!--Table of Child-Links-->
+<A ID="CHILD_LINKS"><STRONG>Subsections</STRONG></A>
+
+<UL CLASS="ChildLinks">
+<LI><A ID="tex2html93"
+  HREF="node4.html">IEEE 754 Basics</A>
+<UL>
+<LI><A ID="tex2html94"
+  HREF="node5.html">Variable precision and truncation error.</A>
+<LI><A ID="tex2html95"
+  HREF="node6.html">Machine epsilon.</A>
+<LI><A ID="tex2html96"
+  HREF="node7.html">Sequence ordering.</A>
+<UL>
+<LI><A ID="tex2html97"
+  HREF="node8.html">Optional aspects.</A>
+<LI><A ID="tex2html98"
+  HREF="node9.html">Omissions.</A>
+<LI><A ID="tex2html99"
+  HREF="node10.html">Inexact implementation.</A>
+<LI><A ID="tex2html100"
+  HREF="node11.html">Out-of-sequence computations.</A>
+</UL>
+<LI><A ID="tex2html101"
+  HREF="node12.html">Rounding mode.</A>
+</UL></UL>
+<!--End of Table of Child-Links-->
+
+<DIV CLASS="navigation"><HR>
+<!--Navigation Panel-->
+<A
+ HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALT="next" SRC="next.png"></A> 
+<A
+ HREF="mss.html">
+<IMG WIDTH="26" HEIGHT="24" ALT="up" SRC="up.png"></A> 
+<A
+ HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALT="previous" SRC="prev.png"></A> 
+<A ID="tex2html91"
+  HREF="node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALT="contents" SRC="contents.png"></A>  
+<BR>
+<B> Next:</B> <A
+ HREF="node4.html">IEEE 754 Basics</A>
+<B> Up:</B> <A
+ HREF="mss.html">The Desert of the</A>
+<B> Previous:</B> <A
+ HREF="node2.html">Introduction</A>
+ &nbsp; <B>  <A ID="tex2html92"
+  HREF="node1.html">Contents</A></B> </DIV>
+<!--End of Navigation Panel-->
+
+</BODY>
+</HTML>

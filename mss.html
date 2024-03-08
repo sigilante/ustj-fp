@@ -1,0 +1,2765 @@
+<!DOCTYPE html> 
+<html lang="en-US" xml:lang="en-US" > 
+<head><title>The Desert of the Reals: Floating-Point Arithmetic on
+Deterministic Systems</title> 
+<meta  charset="utf-8" /> 
+<meta name="generator" content="TeX4ht (https://tug.org/tex4ht/)" /> 
+<meta name="viewport" content="width=device-width,initial-scale=1" /> 
+<link rel="stylesheet" type="text/css" href="mss.css" /> 
+<meta name="src" content="mss.tex" /> 
+</head><body 
+>
+   <div class="maketitle">
+                                                
+                                                
+                                                
+                                                
+
+<h2 class="titleHead">The Desert of the Reals:
+Floating-Point Arithmetic on
+Deterministic Systems</h2>
+<div class="author" ><span 
+class="ec-lmbx-12">N. E. Davis</span><span 
+class="ec-lmbx-12"> </span><span 
+class="ec-lmbx-12">~lagrev-nocfep</span>
+<br />      <span 
+class="ec-lmbx-12">Urbit Foundation</span></div><br />
+<div class="date" ></div>
+   </div>
+   <section role="doc-abstract" class="abstract"> 
+<h3 class="abstracttitle">
+</h3>
+     <!--l. 34--><p class="noindent" ><span 
+class="ec-lmr-9">Floating-point calculations are critical to a number</span>
+     <span 
+class="ec-lmr-9">of                      special                      domains</span>
+     <span 
+class="ec-lmr-9">in modern computing, including machine learning,</span>
+     <span 
+class="ec-lmr-9">graphics,  and  scientiﬁc  computing.  Numerical</span>
+     <span 
+class="ec-lmr-9">calculations are particularly susceptible to opaque</span>
+     <span 
+class="ec-lmr-9">and system-local optimizations, which can break</span>
+     <span 
+class="ec-lmr-9">certain guarantees for deterministic computers. We</span>
+     <span 
+class="ec-lmr-9">consider  the  background  and  implementation  of</span>
+     <span 
+class="ec-lmr-9">IEEE 754 ﬂoating-point arithmetic and options for</span>
+     <span 
+class="ec-lmr-9">implementing mathematics compatibly with fully</span>
+     <span 
+class="ec-lmr-9">reproducible and portable computing. We consider</span>
+     <span 
+class="ec-lmr-9">hardware-based and software-based proposals.</span>
+                                                
+                                                
+</p>
+</section>
+   <h3 class="likesectionHead"><a 
+ id="x1-1000"></a>Contents</h3>
+   <div class="tableofcontents">
+    <span class="sectionToc" >1 <a 
+href="#x1-20001" id="QQ2-1-2">Introduction</a></span>
+<br />    <span class="sectionToc" >2 <a 
+href="#x1-30002" id="QQ2-1-3">A Derivation of the Real Numbers</a></span>
+<br />     <span class="subsectionToc" >2.1 <a 
+href="#x1-40002.1" id="QQ2-1-4">IEEE 754 Basics</a></span>
+<br />    <span class="sectionToc" >3 <a 
+href="#x1-130003" id="QQ2-1-14">Urbit’s Implementation of IEEE 754</a></span>
+<br />    <span class="sectionToc" >4 <a 
+href="#x1-140004" id="QQ2-1-15">Deterministic Computation with a Fractional Part</a></span>
+<br />     <span class="subsectionToc" >4.1 <a 
+href="#x1-150004.1" id="QQ2-1-16">Hardware-supported ﬂoating-point arithmetic</a></span>
+<br />      <span class="subsubsectionToc" >4.1.1 <a 
+href="#x1-160004.1.1" id="QQ2-1-17">Control the stack</a></span>
+<br />      <span class="subsubsectionToc" >4.1.2 <a 
+href="#x1-170004.1.2" id="QQ2-1-18">Simulate the hardware</a></span>
+<br />      <span class="subsubsectionToc" >4.1.3 <a 
+href="#x1-180004.1.3" id="QQ2-1-19">Support a single hardware platform</a></span>
+<br />      <span class="subsubsectionToc" >4.1.4 <a 
+href="#x1-190004.1.4" id="QQ2-1-20">Dock ﬂoating-point results</a></span>
+<br />      <span class="subsubsectionToc" >4.1.5 <a 
+href="#x1-200004.1.5" id="QQ2-1-21">Consistency checks</a></span>
+<br />     <span class="subsectionToc" >4.2 <a 
+href="#x1-210004.2" id="QQ2-1-22">Software-deﬁned ﬂoating-point library</a></span>
+<br />     <span class="subsectionToc" >4.3 <a 
+href="#x1-220004.3" id="QQ2-1-23">Opaque calculations</a></span>
+<br />     <span class="subsectionToc" >4.4 <a 
+href="#x1-230004.4" id="QQ2-1-24">Stored results</a></span>
+<br />     <span class="subsectionToc" >4.5 <a 
+href="#x1-240004.5" id="QQ2-1-25">Proscribing IEEE 754</a></span>
+<br />     <span class="subsectionToc" >4.6 <a 
+href="#x1-300004.6" id="QQ2-1-31">Irregularities</a></span>
+<br />    <span class="sectionToc" >5 <a 
+href="#x1-310005" id="QQ2-1-32">Linear Algebra in Hoon</a></span>
+<br />    <span class="sectionToc" >6 <a 
+href="#x1-320006" id="QQ2-1-33">Conclusion</a></span>
+<br />    <span class="sectionToc" ><a 
+href="#x1-33000" id="QQ2-1-34">References</a></span>
+   </div>
+<!--l. 39--><p class="noindent" >
+</p>
+   <h3 class="sectionHead"><span class="titlemark">1   </span> <a 
+ id="x1-20001"></a>Introduction</h3>
+<!--l. 41--><p class="noindent" >
+     </p><blockquote class="quote">
+                                                
+                                                
+     <!--l. 42--><p class="noindent" >Floating-point  operations  are  a  technically
+     complex  subject  and  the  extent  to  which
+     developers  or  source  code  alter  or  test  this
+     information  will  depend  on  many  factors.
+     Apart   from   the   general   exhortation   to
+     developers  to  be  careful  and  to  make  sure
+     they know what they are doing, there is little
+     of practical use that can be recommended. (<a 
+ id="x1-2001"></a>
+     Jones, <a 
+href="#cite.0@Jones2008">2008</a>, p. 197)</p></blockquote>
+<!--l. 45--><p class="noindent" >Modern digital computers deal, at their root,
+in binary representation, entirely zeros and
+ones.<span class="footnote-mark"><a 
+href="mss2.html#fn1x0"><sup class="textsuperscript">1</sup></a></span><a 
+ id="x1-2002f1"></a> 
+These are often formally considered to be whole numbers in a
+number base of two. However, numerical calculations very
+frequently require the use of numbers with a fractional part to
+adequately represent the elements of a computation.
+</p><!--l. 47--><p class="indent" >   Early numeric computing tended to focus on problems of
+interest to military and national security applications, such as
+partial diﬀerential equations and numerical optimization. Such
+calculations typically involve arrays, and linear algebra was
+elaborated hand-in-hand with digital computing techniques in
+software and hardware. Numerics assumed prominence for
+a wider audience with the rise of gaming on personal
+computers, although these algorithms emphasized speed over
+exactness.<span class="footnote-mark"><a 
+href="mss3.html#fn2x0"><sup class="textsuperscript">2</sup></a></span><a 
+ id="x1-2003f2"></a> 
+To this point in the history of computing, most software either
+ran on a single platform for its lifetime (as with supercomputing)
+or did not require portably deterministic algorithms (as with
+                                                
+                                                
+gaming).<span class="footnote-mark"><a 
+href="mss4.html#fn3x0"><sup class="textsuperscript">3</sup></a></span><a 
+ id="x1-2004f3"></a> 
+</p><!--l. 49--><p class="indent" >   On the other hand, deterministic computing describes the
+ability for a given computation be reproducible exactly.
+Such reproducibility permits referential transparency and
+more powerful reasoning about a program’s results and
+dependencies. This includes, for Urbit as a state machine, that
+the event log replay be portable across platforms to yield the
+same result. Conceptual guarantees must be backstopped by
+actual implementation guarantees for determinism to
+hold.
+</p>
+   <h3 class="sectionHead"><span class="titlemark">2   </span> <a 
+ id="x1-30002"></a>A Derivation of the Real Numbers</h3>
+<!--l. 53--><p class="noindent" >Binary computer values are at root easily represented as
+non-negative integers. However, it is frequently convenient
+when working with human applications to either use other
+numeric bases (notably decimal and hexadecimal) or to permit
+non-integer mathematics.
+</p><!--l. 55--><p class="indent" >   In the historical development of mathematics, logical problems
+in each set of numbers drove the discovery and elaboration of more
+elaborate algebras. For instance, in the ﬁeld of natural numbers
+<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℕ</mi></math>, the operation
+of addition (<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">+</mo></math>) or
+multiplication (<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">×</mo></math>)
+produces a value within the set; however, permitting subtraction
+(<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">−</mo></math>) of a larger
+number from a smaller number can result in a value inexpressible
+in <!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℕ</mi></math>.
+This motivated the introduction of the integers
+<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℤ</mi></math>,
+augmenting the numbers from zero to (positive)
+inﬁnity with the negative numbers. Division
+                                                
+                                                
+(<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">∕</mo></math>)
+similarly produced a crisis when applied to values which did not have
+a whole-number ratio between them, a situation resolved by the
+Pythagorean<span class="footnote-mark"><a 
+href="mss5.html#fn4x0"><sup class="textsuperscript">4</sup></a></span><a 
+ id="x1-3001f4"></a> 
+innovation of the rational numbers or fractions as a class
+<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℚ</mi></math>.
+Ultimately, the common reference set for engineering
+mathematics (and the human understanding of
+the continuum such as measurement) is the set of
+real numbers. The set of real numbers, denoted by
+<!--l. 55--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℝ</mi></math>, is
+characterized by its continuity, implying that for any two
+distinct values within this set, there exists a diﬀerence, no
+matter how small.
+</p><!--l. 57--><p class="indent" >   Since the operations and conventions of
+<!--l. 57--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℝ</mi></math> have
+been found to be so useful, it is desirable to extend the semantics
+to computer programming. However, digital computers, by virtue
+of their binary representation, eﬀectively use natural numbers
+<!--l. 57--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℕ</mi></math> to represent
+numbers (to the limit of memory rather than positive inﬁnity
+<!--l. 57--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" > <mo 
+class="MathClass-bin">+</mo> <mi 
+>∞</mi></math>). Several
+schemes permit a computer integer to be interpreted as if it were a
+number with a fractional part, including a scaling factor, ﬁxed-point
+representation,<span class="footnote-mark"><a 
+href="mss6.html#fn5x0"><sup class="textsuperscript">5</sup></a></span><a 
+ id="x1-3002f5"></a> 
+and ﬂoating-point representations.
+</p><!--l. 59--><p class="indent" >   The basic concept of ﬂoating point arithmetic is that
+it permits the representation of a discrete subset of
+                                                
+                                                
+<!--l. 59--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℝ</mi></math> by
+composing a signiﬁcand, a base, and an exponent. The
+signiﬁcand is the set of signiﬁcant digits, possibly including
+the sign; the base is the understood number base (typically
+2); and the exponent is the power to which that base is
+put before multiplying by the signiﬁcand to yield the
+result.<span class="footnote-mark"><a 
+href="mss7.html#fn6x0"><sup class="textsuperscript">6</sup></a></span><a 
+ id="x1-3004f6"></a> 
+The most ubiquitous ﬂoating-point format in use today is deﬁned
+by the IEEE 754 standard, but certain hardware platforms
+such as GPUs utilize alternative ﬂoating-point arithmetic
+representations.<span class="footnote-mark"><a 
+href="mss8.html#fn7x0"><sup class="textsuperscript">7</sup></a></span><a 
+ id="x1-3005f7"></a> 
+</p><!--l. 61--><p class="indent" >   To summarize, given an abstract description of a ﬂoating
+point system, there are several practical implementations that
+can be derived. We need to specify at least four quantities:
+sign,<span class="footnote-mark"><a 
+href="mss9.html#fn8x0"><sup class="textsuperscript">8</sup></a></span><a 
+ id="x1-3008f8"></a>  signiﬁcand,
+base, and exponent.<span class="footnote-mark"><a 
+href="mss10.html#fn9x0"><sup class="textsuperscript">9</sup></a></span><a 
+ id="x1-3009f9"></a> 
+The base is presumably ﬁxed by the protocol, leaving
+three free values for the implementation to economically
+encode.
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">2.1   </span> <a 
+ id="x1-40002.1"></a>IEEE 754 Basics</h4>
+<!--l. 66--><p class="noindent" >Early computer systems with ﬂoating-point units chose
+                                                
+                                                
+bespoke but incompatible representations, ultimately
+leading to the IEEE 754 (primarily architected by
+William Kahan). IEEE 754 reconciled considerations from
+many ﬂoating-point implementations across hardware
+manufacturers into an internally consistent set of ﬁxed-width
+representations.<span class="footnote-mark"><a 
+href="mss11.html#fn10x0"><sup class="textsuperscript">10</sup></a></span><a 
+ id="x1-4001f10"></a> 
+For instance, the 32-bit “single precision” C ﬂoat/Fortran
+REAL*4 speciﬁcation denotes particular bit positions as
+meaningful,
+</p>
+   <!--l. 68-->
+   <pre class="lstlisting" id="listing-1"><span class="label"><a 
+ id="x1-4002r1"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF</span></span></pre>
+   
+<!--l. 71--><p class="noindent" >where S is the sign bit, 0 for positive
+(<!--l. 72--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">+</mo></math>) and 1 for
+negative (<!--l. 72--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-bin">−</mo></math>);
+E is the exponent in base-2 (8 bits); and F is the signiﬁcand (23
+bits). The exponent is actually calculated at an oﬀset bias of 127
+(<!--l. 72--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mn>7</mn></mrow></msup 
+></math>) so
+that a more expressive range of orders of magnitude can be
+covered. The signiﬁcand has an implied leading 1 bit unless all
+are zero. To wit,
+</p><!--l. 74--><p class="indent" >
+                                                
+                                                
+<!--tex4ht:inline--></p><!--l. 74--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="block" >
+               <msup><mrow 
+><mo 
+class="MathClass-open" stretchy="false">(</mo><mo 
+class="MathClass-bin">−</mo><mn>1</mn><mo 
+class="MathClass-close" stretchy="false">)</mo></mrow><mrow 
+><mi 
+>S</mi></mrow></msup 
+> <mo 
+class="MathClass-bin">×</mo> <msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mi 
+>E</mi><mo 
+class="MathClass-bin">−</mo><mn>1</mn><mn>2</mn><mn>7</mn></mrow></msup 
+> <mo 
+class="MathClass-bin">×</mo> <mn>1</mn><mo 
+class="MathClass-punc">.</mo><mi 
+>F</mi>
+</math>
+<!--l. 76--><p class="nopar" > IEEE 754 speciﬁes operations between numbers, including of
+diﬀerent magnitudes. The standard dictates behavior and
+provides outlines for arithmetic, but leaves algorithmic details to
+the implementation. Numbers are normalized by adjusting the
+exponent of the smaller operand and aligning the signiﬁcands,
+then the operations are carried out. In practice, extended
+precision values are used in the intermediate steps of many
+algorithms, leading to greater accuracy than would otherwise be
+expected.<span class="footnote-mark"><a 
+href="mss12.html#fn11x0"><sup class="textsuperscript">11</sup></a></span><a 
+ id="x1-4003f11"></a> 
+</p><!--l. 81--><p class="indent" >   Since the IEEE 754 ﬂoating-point format packs values of
+diﬀerent kind together bitwise, conventional integer operations
+such as left shift («) and addition (+) do not trivially
+apply.<span class="footnote-mark"><a 
+href="mss13.html#fn12x0"><sup class="textsuperscript">12</sup></a></span><a 
+ id="x1-4007f12"></a> 
+</p><!--l. 83--><p class="indent" >   Floating-point addition (add) proceeds per the following
+algorithm:
+     </p><ol  class="enumerate1" >
+                                                
+                                                
+<li 
+  class="enumerate" id="x1-4009x1">
+     <!--l. 86--><p class="noindent" >Compare  exponents  of  the  two  numbers.  Shift
+     the  smaller  number  rightwards  until  its  exponent
+     matches the larger exponent.
+     </p></li>
+<li 
+  class="enumerate" id="x1-4011x2">
+     <!--l. 87--><p class="noindent" >Add the signiﬁcands together.
+     </p></li>
+<li 
+  class="enumerate" id="x1-4013x3">
+     <!--l. 88--><p class="noindent" >Normalize  the  sum  by  either  shifting  right  and
+     incrementing  the  exponent,  or  shifting  left  and
+     decrementing the exponent.
+     </p></li>
+<li 
+  class="enumerate" id="x1-4015x4">
+     <!--l. 89--><p class="noindent" >If  an  overﬂow  or  an  underﬂow  occurs,  yield  an
+     exception.
+     </p></li>
+<li 
+  class="enumerate" id="x1-4017x5">
+     <!--l. 90--><p class="noindent" >Round the signiﬁcand to the appropriate number of
+     bits.
+     </p></li>
+<li 
+  class="enumerate" id="x1-4019x6">
+     <!--l. 91--><p class="noindent" >Renormalize as necessary (back to step 3).</p></li></ol>
+<!--l. 94--><p class="indent" >   IEEE 754 ﬂoating-point arithmetic and its predecessors have
+some signiﬁcant mathematical compromises even in its formal
+                                                
+                                                
+speciﬁcation.<span class="footnote-mark"><a 
+href="mss14.html#fn13x0"><sup class="textsuperscript">13</sup></a></span><a 
+ id="x1-4020f13"></a> 
+For instance, as a result of the discrete nature of the bitwise
+representation in E and F, ﬂoating-point mathematics are
+actually a subset of discrete mathematics masquerading as
+real mathematics. This has non-trivial consequences for
+certain aspects of calculations, including error accrual. In
+particular, three facts dominate the resolution:
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-4022x1">
+     <!--l. 97--><p class="noindent" >The distance between two adjacent values changes
+     based  on  the  magnitude  of  the  exponent  and  the
+     distance from zero. (The signiﬁcand resolution stays
+     the same but the exponent changes.)
+     </p></li>
+<li 
+  class="enumerate" id="x1-4024x2">
+     <!--l. 98--><p class="noindent" >There is a relative approximation error for a given
+     bitwidth in IEEE 754, called the <span 
+class="ec-lmri-10">machine epsilon</span>.<span class="footnote-mark"><a 
+href="mss15.html#fn14x0"><sup class="textsuperscript">14</sup></a></span><a 
+ id="x1-4025f14"></a> 
+     </p></li>
+<li 
+  class="enumerate" id="x1-4027x3">
+     <!--l. 99--><p class="noindent" >Operations between numbers of diﬀerent magnitudes
+     are particularly aﬀected by their relative numerical
+     horizon.</p></li></ol>
+<!--l. 102--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-5000"></a><span 
+class="ec-lmbx-10">Variable precision and truncation error.</span></span>
+   For most values of the exponent E, the diﬀerence between
+two discrete values is determined by the absolute magnitude of
+                                                
+                                                
+the signiﬁcand S. The diﬀerence between serial values
+is
+</p><!--tex4ht:inline--><!--l. 110--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="block" ><mtable 
+columnalign="left" class="align">
+        <mtr><mtd 
+columnalign="right" class="align-odd"><mi mathvariant="normal">Δ</mi><mi 
+>S</mi></mtd>        <mtd 
+class="align-even"> <mo 
+class="MathClass-rel">=</mo><msub><mrow 
+> <mn>0</mn><mn>0</mn><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>1</mn></mrow><mrow 
+><mn>2</mn></mrow></msub 
+><mspace width="2em"/></mtd>           <mtd 
+columnalign="right" class="align-label"></mtd>        <mtd 
+class="align-label">
+        <mspace width="2em"/></mtd></mtr><mtr><mtd 
+columnalign="right" class="align-odd"></mtd>          <mtd 
+class="align-even"> <mo 
+class="MathClass-rel">=</mo> <mn>1</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>1</mn><mn>1</mn><mn>9</mn><mn>2</mn><mn>0</mn><mn>9</mn><mn>2</mn><mn>8</mn><mn>9</mn><mn>5</mn><mn>5</mn><mn>0</mn><mn>7</mn><mn>8</mn><mn>1</mn><mn>2</mn><mn>5</mn> <mo 
+class="MathClass-bin">−</mo> <mn>1</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mspace width="2em"/></mtd>        <mtd 
+columnalign="right" class="align-label"></mtd>        <mtd 
+class="align-label">
+        <mspace width="2em"/></mtd></mtr><mtr><mtd 
+columnalign="right" class="align-odd"></mtd>          <mtd 
+class="align-even"> <mo 
+class="MathClass-rel">=</mo> <mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>1</mn><mn>1</mn><mn>9</mn><mn>2</mn><mn>0</mn><mn>9</mn><mn>2</mn><mn>8</mn><mn>9</mn><mn>5</mn><mn>5</mn><mn>0</mn><mn>7</mn><mn>8</mn><mn>1</mn><mn>2</mn><mn>5</mn><mspace width="2em"/></mtd>             <mtd 
+columnalign="right" class="align-label"></mtd>        <mtd 
+class="align-label">
+        <mspace width="2em"/></mtd></mtr><mtr><mtd 
+columnalign="right" class="align-odd"></mtd>          <mtd 
+class="align-even"> <mo 
+class="MathClass-rel">=</mo> <msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mo 
+class="MathClass-bin">−</mo><mn>2</mn><mn>3</mn></mrow></msup 
+><mstyle 
+class="text"><mtext class="textrm" mathvariant="normal" >.</mtext></mstyle><mspace width="2em"/></mtd>                                        <mtd 
+columnalign="right" class="align-label"><mstyle 
+   id="x1-5001r1"  class="label" ></mstyle><!--endlabel--><mstyle 
+class="maketag"><mtext  >(1)</mtext></mstyle><mspace width="0.33em" class="nbsp" />
+   </mtd></mtr></mtable></math>
+<!--l. 112--><p class="noindent" >This is multipled by the the result of the exponent E and the
+bias, meaning that for each exponent value the diﬀerence
+between subsequent values changes. (Figure <a 
+href="#x1-50021">1<!--tex4ht:ref: fig:fp-res --></a>  represents this
+schematically.)
+</p>
+   <figure class="figure"> 
+
+                                                
+                                                
+<a 
+ id="x1-50021"></a>
+                                                
+                                                
+<!--l. 116--><p class="noindent" ><img 
+src="img/fp-res.png" alt="PIC"  
+width="252" height="162"  />
+</p>
+<figcaption class="caption" ><span class="id">Figure 1:  </span><span  
+class="content">Schematic  representation  of  granularity  and
+variable   precision   of   ﬂoating-point   values   and   their
+relationship to the (continuous) set of real numbers.</span></figcaption><!--tex4ht:label?: x1-50021 -->
+                                                
+                                                
+   </figure>
+<!--l. 121--><p class="indent" >   However, for normalized numbers, or numbers that are
+left-shifted or right-shifted in order to carry out a calculation,
+values are determined by the <span 
+class="ec-lmri-10">relative shift </span>in exponent
+<!--l. 121--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi mathvariant="normal">Δ</mi><mi 
+>E</mi></math>. For
+<!--l. 121--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>E</mi> <mo 
+class="MathClass-rel">=</mo> <mn>2</mn></math>,
+for instance, the diﬀerence between serial values is
+<!--l. 121--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mo 
+class="MathClass-bin">−</mo><mn>2</mn><mn>1</mn></mrow></msup 
+></math>. This
+variable precision means that the precision of ﬂoating-point
+values varies across the range of representable numbers when
+operations take place. Operations between two numbers of
+fairly diﬀerent precisions are particularly vulnerable to
+accuracy loss, although some numerical techniques can be
+employed to mitigate.
+</p><!--l. 124--><p class="indent" >   Truncation error results from terminating repeating
+“binaries” (by analogy with “decimals”). Just as
+<!--l. 124--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mfrac><mrow 
+><mn>1</mn></mrow>
+<mrow 
+><mn>3</mn></mrow></mfrac> <mo 
+class="MathClass-rel">=</mo> <mn>0</mn><mo 
+class="MathClass-punc">.</mo><mover 
+accent="true"><mrow 
+><mn>3</mn></mrow><mo accent="true">¯</mo></mover> <mo 
+class="MathClass-rel">=</mo> <mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>3</mn><mn>3</mn><mn>3</mn><mn>3</mn><mi 
+>…</mi></math>
+has a ﬁnite precision when written in base-10, numbers
+that are not precise powers of two result in repeating
+fractions. These necessarily terminate at the resolution of
+the signiﬁcand. The number and nature of truncation
+and rounding can signiﬁcantly aﬀect the accuracy of
+ﬂoating-point arithmetic and algorithms (<a 
+ id="x1-5003"></a> Izquierdo and
+Polhill, <a 
+href="#cite.0@Izquierdo2006">2006</a>).
+</p>
+<!--l. 126--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-6000"></a><span 
+class="ec-lmbx-10">Machine epsilon.</span></span>
+   The machine epsilon, or smallest value discernable from
+1.0, is determined by the precision of the ﬂoating-point
+representation. The machine epsilon for a particular bit width is
+determined by setting two to the negative power of the number
+of bits used for the magnitude of the mantissa and accounting for
+the leading implicit bit 1; for 32-bit single-precision ﬂoat this
+is <!--l. 128--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mo 
+class="MathClass-bin">−</mo><mn>2</mn><mn>3</mn><mo 
+class="MathClass-bin">−</mo><mn>1</mn></mrow></msup 
+> <mo 
+class="MathClass-rel">=</mo> <msup><mrow 
+><mn>2</mn></mrow><mrow 
+><mo 
+class="MathClass-bin">−</mo><mn>2</mn><mn>2</mn></mrow></msup 
+></math>.
+Diﬀerences from 1.0 smaller than this cannot be represented in
+this bit width.
+                                                
+                                                
+</p>
+<!--l. 130--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-7000"></a><span 
+class="ec-lmbx-10">Sequence ordering.</span></span>
+   In situations in which ﬂoating-point operations may
+occur in diﬀerent orders, even the basic guarantee of
+communitativity breaks. For instance, in 64-bit FP arithmetic,
+the following holds true (example in Python):
+</p>
+   <!--l. 135-->
+   <pre class="lstlisting" id="listing-2"><span class="label"><a 
+ id="x1-7001r1"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">In</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[1]:</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(1.1-0.3)-0.8</span></span> 
+<span class="label"><a 
+ id="x1-7002r2"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">Out</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">[1]:</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">0.0</span></span> 
+<span class="label"><a 
+ id="x1-7003r3"></a></span> 
+<span class="label"><a 
+ id="x1-7004r4"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">In</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[2]:</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(1.1-0.8)-0.3</span></span> 
+<span class="label"><a 
+ id="x1-7005r5"></a><span 
+class="ec-lmr-5">5</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">Out</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">[2]:</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">5.551115123125783</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">e</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">-17</span></span></pre>
+   
+<!--l. 143--><p class="noindent" >This occurs since operations of diﬀerent magnitude can aﬀect
+the resulting signiﬁcand, a sort of horizon of resolution
+leading to diﬀerences in the outcome. Sequence order
+can be changed (and thus commutativity broken) as a
+result of many common programmer design patterns,
+including compiler optimizations, race conditions, and
+parallelization.
+</p><!--l. 146--><p class="indent" >   Another problem in numerical analysis, error accrual is
+likewise due to the horizon of resolution. The accrual of
+error due to summing sequences of numbers (whether
+in parallel or serially) occurs in the summation of
+sequences of numbers since the error term can grow as
+<!--l. 146--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>n</mi></math>.
+Kahan–Babuška compensated summation can be used to
+track a separate error term (<span 
+class="ec-lmri-10">de facto </span>extending the precision
+during the operations) and adding it back in to the sum
+before yielding the ﬁnal result (<a 
+ id="x1-7006"></a> Babuška, <a 
+href="#cite.0@Babuska1969">1969</a><a 
+ id="x1-7007"></a> ; Kahan,
+<a 
+href="#cite.0@Kahan1965">1965</a>).
+</p><!--l. 148--><p class="indent" >   Formally neither associative nor commutative for the above
+reasons, ﬂoating-point arithmetic can break our mathematical
+intuitions in interesting ways. However, this is a consistent
+and well-understood phenomenon. For our purposes as
+designers of deterministic computers, the most damning
+indictment has to do not with IEEE 754 itself but with
+manufacturer deviation in hardware implementation. In
+1997, William Kahan himself complained (justly) about
+the compromises inherent in the standard for compiler
+implementers:
+                                                
+                                                
+</p><!--l. 150--><p class="indent" >
+     </p><blockquote class="quote">
+     <!--l. 151--><p class="noindent" >Most  computer  linguists  ﬁnd  ﬂoating-point
+     arithmetic   too   disruptive   [due   to]   [t]heir
+     predilection  for  “referential  transparency”  ….
+     Computer linguists also dislike functions with
+     side-eﬀects and functions aﬀected by implicit
+     variables  not  explicit  in  argument  lists.  But
+     ﬂoating-point operations can raise IEEE 754
+     exception ﬂags as side-eﬀects, and operations
+     are  aﬀected  implicitly  by  exception-handling
+     and   rounding   modes   eligible   at   run-time
+     according  to  IEEE  754.  Alas,  that  standard
+     omitted to bind ﬂags and modes to locutions
+     in standard programming languages, and this
+     omission grants computer linguists a licence for
+     inaction. (<a 
+ id="x1-7008"></a> Kahan, <a 
+href="#cite.0@Kahan1997">1997a</a>)</p></blockquote>
+<!--l. 155--><p class="indent" >   There are several sources of trouble for even single-threaded
+deterministic computation using hardware IEEE 754 ﬂoating-point units
+(FPUs):<span class="footnote-mark"><a 
+href="mss16.html#fn15x0"><sup class="textsuperscript">15</sup></a></span><a 
+ id="x1-7009f15"></a> 
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-7012x1">
+     <!--l. 158--><p class="noindent" >Optional, discretionary, or advisory aspects.
+     </p></li>
+<li 
+  class="enumerate" id="x1-7014x2">
+     <!--l. 159--><p class="noindent" >Gaps or omissions in the speciﬁcation.
+                                                
+                                                
+     </p></li>
+<li 
+  class="enumerate" id="x1-7016x3">
+     <!--l. 160--><p class="noindent" >Failure to implement the speciﬁcation exactly.
+     </p></li>
+<li 
+  class="enumerate" id="x1-7018x4">
+     <!--l. 161--><p class="noindent" >Out-of-sequence computations.</p></li></ol>
+<!--l. 164--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-8000"></a><span 
+class="ec-lmbx-10">Optional aspects.</span></span>
+   Several aspects of IEEE 754 are optional or advisory,
+including:
+</p><!--l. 168--><p class="indent" >
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-8002x1">
+     <!--l. 169--><p class="noindent" >Exception handling means that the hardware may
+     specify rounding via an overﬂow ﬂag.
+     </p></li>
+<li 
+  class="enumerate" id="x1-8004x2">
+     <!--l. 170--><p class="noindent" >Extended precisions formats are not a huge deal to
+     leave out, but extended precision arithmetic (used for
+     intermediate results) can materially change results.
+     </p></li>
+<li 
+  class="enumerate" id="x1-8006x3">
+     <!--l. 171--><p class="noindent" >Subnormals are optional;<span class="footnote-mark"><a 
+href="mss17.html#fn16x0"><sup class="textsuperscript">16</sup></a></span><a 
+ id="x1-8007f16"></a> 
+     some platforms may ﬂush them to zero or (worse)
+     allow subnormal support to be disabled in certain
+                                                
+                                                
+     cases.<span class="footnote-mark"><a 
+href="mss18.html#fn17x0"><sup class="textsuperscript">17</sup></a></span><a 
+ id="x1-8008f17"></a> </p></li></ol>
+<!--l. 174--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-9000"></a><span 
+class="ec-lmbx-10">Omissions.</span></span>
+   Whether something is a gap or optional is something
+of a philosophical question for us, but some parts are
+underspeciﬁed in a way that makes portability impossible.
+E.g., mixed-precision operations can yield unpredictable
+results depending on the compiler and hardware. This is a
+function of rounding modes, precision loss, precision of
+intermediate results, and the presence or absence of dedicated
+hardware support for certain precision combinations.
+</p>
+<!--l. 178--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-10000"></a><span 
+class="ec-lmbx-10">Inexact implementation.</span></span>
+   Failure to implement IEEE 754 correctly may happen
+inadvertently, as with the Pentium FDIV bug in the 1990s (<a 
+ id="x1-10001"></a>
+Edelman, <a 
+href="#cite.0@Edelman1997">1997</a>). Alternatively, chipset designers may deviate
+from the speciﬁcation for reasons of performance or limitations
+in the architecture.
+</p><!--l. 182--><p class="indent" >   For instance, IEEE 754 deﬁnes a range of numbers as
+“not-a-number” values, or NaNs. Per the speciﬁcation,
+a NaN can be a signalling NaN, meaning that it
+intends to ﬂag and possibly disrupt a problematic
+computation;<span class="footnote-mark"><a 
+href="mss19.html#fn18x0"><sup class="textsuperscript">18</sup></a></span><a 
+ id="x1-10002f18"></a> 
+or a quiet NaN, which does not raise such an exception and
+                                                
+                                                
+merely yields a result with the NaN propagated to the ﬁnal
+result.<span class="footnote-mark"><a 
+href="mss20.html#fn19x0"><sup class="textsuperscript">19</sup></a></span><a 
+ id="x1-10004f19"></a> 
+Not all processors implement this part of IEEE 754 correctly:
+“The Motorola DSP563CCC does not support NaNs or
+inﬁnities. Floating-point arithmetic operations do not overﬂow
+to inﬁnity; they saturate at the maximum representable value”
+(Jones, <a 
+href="#cite.0@Jones2008">2008</a>, p. 338).
+</p><!--l. 184--><p class="indent" >   As a further example, fused multiply-add (FMA)
+(<!--l. 184--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi> <mo 
+class="MathClass-bin">×</mo> <mi 
+>b</mi> <mo 
+class="MathClass-bin">+</mo> <mi 
+>c</mi></math>) is
+implemented on certain hardware to favor double operations
+and not quadruple-precision operations (<a 
+ id="x1-10005"></a> Kahan, <a 
+href="#cite.0@Kahan1997">1997a</a>,
+p. 5).
+</p>
+<!--l. 187--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-11000"></a><span 
+class="ec-lmbx-10">Out-of-sequence computations.</span></span>
+   A modern compiler using optimization ﬂags or even
+modest parallelism can easily cause a ﬂoating-point calculation
+to rely on operands that were produced in an order diﬀerent
+than that speciﬁed in the code. This is largely opaque to the
+programmer, aside from some simple heuristics, and makes it
+diﬃcult to reproduce or reason about the ﬁne details of
+computations.
+</p><!--l. 191--><p class="indent" >   As demonstrated above, out-of-sequence or resequenced
+computations can aﬀect results due to rounding behavior and
+the “numerical horizon” which results between values. These
+can happen due to multithreaded computation or an
+optimizing compiler.
+</p>
+<!--l. 193--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-12000"></a><span 
+class="ec-lmbx-10">Rounding mode.</span></span>
+   IEEE 754 ﬂoating-point operations take place using one of
+four rounding modes.
+</p><!--l. 197--><p class="indent" >
+                                                
+                                                
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-12002x1">
+     <!--l. 198--><p class="noindent" >Round to nearest, ties to even. Set ties to the last bit
+     as zero (even). The default.
+     </p></li>
+<li 
+  class="enumerate" id="x1-12004x2">
+     <!--l. 199--><p class="noindent" >Round   to   zero.   Truncate,   eﬀectively   rounding
+     positive numbers down and negative numbers up.
+     </p></li>
+<li 
+  class="enumerate" id="x1-12006x3">
+     <!--l. 200--><p class="noindent" >Round toward positive inﬁnity. Up regardless of sign.
+     </p></li>
+<li 
+  class="enumerate" id="x1-12008x4">
+     <!--l. 201--><p class="noindent" >Round toward negative inﬁnity. Down regardless of
+     sign.</p></li></ol>
+<!--l. 204--><p class="noindent" >The rounding mode can aﬀect the result of computations,
+and if other processes are changing the mode (which
+can even be set per-thread), results may not be reliably
+reproducible.
+</p><!--l. 207--><p class="indent" >   “Obtaining the correctly rounded result of an addition or
+subtraction operation requires an additional bit in the
+signiﬁcand (as provided by the IEC 60559 guard bit) to hold
+the intermediate result” (<a 
+ id="x1-12009"></a> Jones, <a 
+href="#cite.0@Jones2008">2008</a>, p. 65).
+</p><!--l. 210--><p class="noindent" >
+</p>
+   <h3 class="sectionHead"><span class="titlemark">3   </span> <a 
+ id="x1-130003"></a>Urbit’s Implementation of IEEE 754</h3>
+<!--l. 212--><p class="noindent" >Urbit implements a subset of IEEE 754 functionality in
+<code class="lstinline"><span style="color:#000000">/sys/hoon</span></code>, the Hoon language speciﬁcation. The Nock
+                                                
+                                                
+operations formally take place on integers. In practice,
+we could imagine several ways of implementing such
+operations: bitmasking the integers or breaking them
+apart into three components, for instance. We take
+Urbit’s implementation of <code class="lstinline"><span style="color:#404040">@rs</span></code> (single-precision ﬂoat) as
+representative.<span class="footnote-mark"><a 
+href="mss21.html#fn20x0"><sup class="textsuperscript">20</sup></a></span><a 
+ id="x1-13001f20"></a> 
+</p><!--l. 214--><p class="indent" >   <code class="lstinline"><span style="color:#000000">++rs</span></code> is a wrapper core to instrument arithmetic arms like
+<code class="lstinline"><span style="color:#000000">++add</span></code> using the <code class="lstinline"><span style="color:#000000">++ff</span></code> ﬂoating-point functionality core.
+Ultimately this resolves to breaking out the components (sign,
+exponent, and signiﬁcand) into separate numbers for the actual
+operation.<span class="footnote-mark"><a 
+href="mss22.html#fn21x0"><sup class="textsuperscript">21</sup></a></span><a 
+ id="x1-13002f21"></a> 
+</p><!--l. 216--><p class="indent" >   The <code class="lstinline"><span style="color:#000000">++fn</span></code> core oﬀers a generalized interface for a superset
+of IEEE 754-style ﬂoating-point implementations, permitting
+bit width, precision, bias, and rounding mode to be freely
+speciﬁed.<span class="footnote-mark"><a 
+href="mss23.html#fn22x0"><sup class="textsuperscript">22</sup></a></span><a 
+ id="x1-13005f22"></a> 
+The actual implementation on <code class="lstinline"><span style="color:#000000">+$fn</span></code>-typed values is rather
+dense and features numerous rounding and overﬂow checks:
+</p>
+   <!--l. 219-->
+   <pre class="lstlisting" id="listing-11"><span class="label"><a 
+ id="x1-13006r1"></a></span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">++</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">add</span></span> 
+<span class="label"><a 
+ id="x1-13007r2"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">|=</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">a=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">e=@s</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a=@u</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">]</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">b=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">e=@s</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a=@u</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">]</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e=?</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">]</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">^-</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">fn</span></span> 
+<span class="label"><a 
+ id="x1-13008r3"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">=+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">q=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">dif:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13009r4"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">|-</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">?.</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">syn:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">q</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">$</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">b</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">b,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">q</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">+</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">q</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">))</span></span> 
+<span class="label"><a 
+ id="x1-13010r5"></a><span 
+class="ec-lmr-5">5</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">?:</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e</span></span> 
+<span class="label"><a 
+ id="x1-13011r6"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">%f</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.b</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">^add</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lsh</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[0</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">abs:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">q</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)]</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)]</span></span> 
+<span class="label"><a 
+ id="x1-13012r7"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">=+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">ma=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">met</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">0</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">mb=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">met</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">0</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)]</span></span> 
+<span class="label"><a 
+ id="x1-13013r8"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">=+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">^=</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">w</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">%+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">dif:si</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.a</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">%-</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">sun:si</span></span> 
+<span class="label"><a 
+ id="x1-13014r9"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">?:</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">gth</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">prc</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">ma</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">^sub</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">prc</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">ma</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">0</span></span> 
+<span class="label"><a 
+ id="x1-13015r10"></a><span 
+class="ec-lmr-5">10</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">=+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">^=</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">x</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">%+</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">sum:si</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.b</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">sun:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">mb</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13016r11"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">?:</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">((</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">cmp:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">w</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">x</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">--1</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13017r12"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">?-</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">r</span></span> 
+<span class="label"><a 
+ id="x1-13018r13"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%z</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lug</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%fl</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%d</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lug</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%fl</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13019r14"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%a</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lug</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%lg</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%u</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lug</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%lg</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13020r15"></a><span 
+class="ec-lmr-5">15</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%n</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lug</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">%na</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span> 
+<span class="label"><a 
+ id="x1-13021r16"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">==</span></span> 
+<span class="label"><a 
+ id="x1-13022r17"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">rou</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">e.b</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">^add</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">lsh</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">[0</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">abs:si</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">q</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)]</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a.b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)])</span></span></pre>
+   
+<!--l. 239--><p class="indent" >   There is, of course, a feint in the foregoing discussion. Nock
+is a virtual machine speciﬁcation, and in practice operations
+that would beneﬁt from more direct expression in C are
+                                                
+                                                
+<span 
+class="ec-lmri-10">jetted</span>.<span class="footnote-mark"><a 
+href="mss24.html#fn23x0"><sup class="textsuperscript">23</sup></a></span><a 
+ id="x1-13023f23"></a>  Thus the
+actual call in this case will correspond to some C code using the SoftFloat
+library:<span class="footnote-mark"><a 
+href="mss25.html#fn24x0"><sup class="textsuperscript">24</sup></a></span><a 
+ id="x1-13024f24"></a> 
+</p>
+   <!--l. 242-->
+   <pre class="lstlisting" id="listing-12"><span class="label"><a 
+ id="x1-13025r1"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3_noun</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3qet_add</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3_atom</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3_atom</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3_atom</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">r</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">{</span></span> 
+<span class="label"><a 
+ id="x1-13026r2"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">union</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">sing</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">d</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">;</span></span> 
+<span class="label"><a 
+ id="x1-13027r3"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">//</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">set</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">IEEE</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">754</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">rounding</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">mode</span></span> 
+<span class="label"><a 
+ id="x1-13028r4"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">_set_rounding</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">r</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">);</span></span> 
+<span class="label"><a 
+ id="x1-13029r5"></a><span 
+class="ec-lmr-5">5</span></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">//</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">unwrap</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">nouns</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">into</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">C</span></span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">-</span></span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">typed</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">values</span></span> 
+<span class="label"><a 
+ id="x1-13030r6"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">=</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3r_word</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(0,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">);</span></span> 
+<span class="label"><a 
+ id="x1-13031r7"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">d</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">=</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3r_word</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(0,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">);</span></span> 
+<span class="label"><a 
+ id="x1-13032r8"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">//</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">perform</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">addition</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">and</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">unify</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">NaN</span></span> 
+<span class="label"><a 
+ id="x1-13033r9"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">e</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">s</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">=</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">_nan_unify</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">f32_add</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">s</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">d</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">s</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">));</span></span> 
+<span class="label"><a 
+ id="x1-13034r10"></a><span 
+class="ec-lmr-5">10</span></span> 
+<span class="label"><a 
+ id="x1-13035r11"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">//</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">wrap</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">C</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">value</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">back</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">into</span></span><span style="color:#808080"> </span><span style="color:#808080"><span 
+class="ec-lmtti-10x-x-90">noun</span></span> 
+<span class="label"><a 
+ id="x1-13036r12"></a></span><span style="color:#000000"> </span><span style="color:#000000"> </span><span style="color:#404040"><span 
+class="ec-lmtk-10x-x-90">return</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">u3i_words</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">(1,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-9">&#x0026;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">e</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">c</span></span><span style="color:#000000"><span 
+class="ec-lmtt-9">);</span></span> 
+<span class="label"><a 
+ id="x1-13037r13"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-9">}</span></span></pre>
+   
+<!--l. 258--><p class="indent" >   Why SoftFloat? Enter, stage left, the problem of
+platform-portable determinism.
+</p>
+   <h3 class="sectionHead"><span class="titlemark">4   </span> <a 
+ id="x1-140004"></a>Deterministic Computation with a Fractional
+Part</h3>
+<!--l. 263--><p class="noindent" >Non-real arithmetic is less signiﬁcant for many of the core
+operations of Urbit as a personal server platform. However,
+gaming, machine learning, graphics, and other applications rely on
+ﬂoating-point calculations—preferably as fast as possible. In fact,
+not only applications-oriented processes rely on determinism:
+guarantees in cryptography and contractual correctness for web3;
+veriﬁcation and validation; accounting and legal compliance;
+and code correctness analysis all require reproducible
+determinism.<span class="footnote-mark"><a 
+href="mss26.html#fn25x0"><sup class="textsuperscript">25</sup></a></span><a 
+ id="x1-14001f25"></a> 
+</p><!--l. 265--><p class="indent" >   Why can’t we just allow diﬀerent results in the last
+binary places of the signiﬁcand? Philosophically, Urbit
+holds the following statements as bedrock truth (<a 
+ id="x1-14002"></a> Monk,
+                                                
+                                                
+<a 
+href="#cite.0@Monk2020">2020a</a>):
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-14004x1">
+     <!--l. 268--><p class="noindent" >A10.    Correctness    is    more    important    than
+     performance.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14006x2">
+     <!--l. 269--><p class="noindent" >A12. Correctness is more important than optimality.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14008x3">
+     <!--l. 270--><p class="noindent" >A14. Deterministic beats heuristic.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14010x4">
+     <!--l. 271--><p class="noindent" >F1. If it’s not deterministic, it isn’t real.</p></li></ol>
+<!--l. 274--><p class="indent" >   Urbit makes much of avoiding the “ball of mud” “standard
+software architecture” (<a 
+ id="x1-14011"></a> Foote and Yoder, <a 
+href="#cite.0@Foote1999">1999</a>). In this
+design anti-pattern, a lack of guarantees and predictable
+behavior leads <span 
+class="ec-lmri-10">inevitably </span>to haphazard and illegible software
+bloat (<a 
+href="#cite.0@Foote1999">ibid.</a>). We can thus understand why Urbit as a
+platform considers even deviations in the last bit of a
+signiﬁcand to be threads fraying the edge of sanity <a 
+ id="x1-14012"></a> Monk
+(<a 
+href="#cite.0@Monk2020a">2020b</a>):
+     </p><blockquote class="quote">
+     <!--l. 277--><p class="noindent" >If you do the same thing twice, your computer
+     should react the same way. This is comforting.
+     This is also what makes it easy to reason about
+     and use eﬀectively. If you’re not sure what your
+     computer will do, you’ll be afraid of it and act
+     defensively toward it. This inevitably leads to
+     a big ball of mud.</p></blockquote>
+                                                
+                                                
+<!--l. 280--><p class="indent" >   For most purposes in the broader software world,
+tightly reproducible precision has not been a high priority.
+Precision having already been sacriﬁced, the gist of the
+calculation is more important than the fourth decimal
+place (e.g. in realtime 3D graphics). This leads the phrase
+“implements the IEEE 754 standard” to be interpreted
+erroneously to imply full reproducibility (<a 
+ id="x1-14013"></a> Figueroa del Cid,
+<a 
+href="#cite.0@Figueroa2000">2000</a>).
+</p><!--l. 282--><p class="indent" >   For example, consider the expression
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mi 
+>a</mi> <mo 
+class="MathClass-bin">×</mo> <mi 
+>b</mi><mo 
+class="MathClass-close" stretchy="false">)</mo> <mo 
+class="MathClass-bin">+</mo> <mi 
+>c</mi></math>. If
+a compiler permits the two operations to be evaluated
+sequentially (a multiplication followed by an addition),
+then rounding occurs twice. If a compiler optimizes the
+operation into an FMA, or fused multiply-add, then a
+single rounding occurs. <a 
+ id="x1-14014"></a> Peters presents a pathological
+case for 32-bit single-precision ﬂoating-point values:
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi> <mo 
+class="MathClass-rel">=</mo> <mn>1</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>1</mn><mn>1</mn><mn>9</mn><mn>2</mn><mn>0</mn><mn>9</mn><mn>2</mn><mn>9</mn></math>,
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>b</mi> <mo 
+class="MathClass-rel">=</mo> <mn>5</mn><mn>3</mn><mn>4</mn><mn>0</mn><mn>0</mn><mn>7</mn><mn>0</mn><mn>8</mn></math>, and
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>c</mi> <mo 
+class="MathClass-rel">=</mo> <mo 
+class="MathClass-bin">−</mo><mi 
+>b</mi></math>.
+In this case, the two-stage operation wipes out the
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mn>0</mn><mo 
+class="MathClass-punc">.</mo><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>0</mn><mn>1</mn><mn>1</mn><mn>9</mn><mn>2</mn><mn>0</mn><mn>9</mn><mn>2</mn><mn>9</mn></math> component
+of <!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi></math>, yielding
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi></math> as an integer.
+Then <!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>c</mi></math> is added
+and the result is <!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mn>8</mn></math>.
+With FMA as a single-step operation, the (correct) answer
+<!--l. 282--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mn>6</mn><mo 
+class="MathClass-punc">.</mo><mn>3</mn><mn>6</mn><mn>5</mn><mn>8</mn><mn>6</mn><mn>0</mn><mn>4</mn><mn>6</mn><mn>2</mn></math> is
+obtained. The optimization is more correct than the naïve
+route in this case.
+</p><!--l. 284--><p class="indent" >   However, in another example due to <a 
+ id="x1-14015"></a> Dawson, FMA yields incorrect
+results: for <!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi> <mo 
+class="MathClass-bin">×</mo> <mi 
+>b</mi> <mo 
+class="MathClass-bin">+</mo> <mi 
+>c</mi> <mo 
+class="MathClass-bin">×</mo> <mi 
+>d</mi></math>
+with <!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi> <mo 
+class="MathClass-rel">=</mo> <mi 
+>c</mi></math>
+and <!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>b</mi> <mo 
+class="MathClass-rel">=</mo> <mo 
+class="MathClass-bin">−</mo><mi 
+>d</mi></math>,
+the answer should be zero, and calculated in two steps will
+typically be zero. With a fused multiply-add, however, the
+code becomes fmadd(a, b, c*d), rounding the multiplication of
+<!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>c</mi></math> and
+<!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>d</mi></math> but not
+that of <!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>a</mi></math>
+                                                
+                                                
+and <!--l. 284--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>b</mi></math>;
+the answer will likely not be zero.
+</p><!--l. 286--><p class="indent" >   The situation grows more ambiguous across architectures. <a 
+ id="x1-14016"></a>
+Jones (<a 
+href="#cite.0@Jones2008">2008</a>, p. 346) presents the pathological case of a
+compliant platform that may use extended precision bits in
+the calculation of a + b:
+</p>
+   <!--l. 289-->
+   <pre class="lstlisting" id="listing-13"><span class="label"><a 
+ id="x1-14017r1"></a></span><span style="color:#000000"><span 
+class="ec-lmtk-10">#</span></span><span style="color:#000000"><span 
+class="ec-lmtk-10">include</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">&#x003C;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">stdio</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">.</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">h</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">&#x003E;</span></span> 
+<span class="label"><a 
+ id="x1-14018r2"></a></span> 
+<span class="label"><a 
+ id="x1-14019r3"></a></span><span style="color:#000000"><span 
+class="ec-lmtk-10">extern</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtk-10">double</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">,</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">;</span></span> 
+<span class="label"><a 
+ id="x1-14020r4"></a></span> 
+<span class="label"><a 
+ id="x1-14021r5"></a></span><span style="color:#000000"><span 
+class="ec-lmtk-10">void</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">f</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">(</span></span><span style="color:#000000"><span 
+class="ec-lmtk-10">void</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">)</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">{</span></span> 
+<span class="label"><a 
+ id="x1-14022r6"></a></span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span style="color:#000000"><span 
+class="ec-lmtk-10">double</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">x</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">;</span></span> 
+<span class="label"><a 
+ id="x1-14023r7"></a></span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">x</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">=</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">+</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">;</span></span> 
+<span class="label"><a 
+ id="x1-14024r8"></a></span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span style="color:#000000"><span 
+class="ec-lmtk-10">if</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">x</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">!=</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">a</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">+</span></span><span style="color:#000000"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">)</span></span> 
+<span class="label"><a 
+ id="x1-14025r9"></a></span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span 
+class="ec-lmtt-10"> </span><span style="color:#000000"><span 
+class="ec-lmtt-10">printf</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">(</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">&#x0022;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">x</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">␣</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">!=</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">␣</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">a</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">␣</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">+</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">␣</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">b</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">\</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">n</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">&#x0022;</span></span><span style="color:#000000"><span 
+class="ec-lmtt-10">);</span></span> 
+<span class="label"><a 
+ id="x1-14026r10"></a></span><span style="color:#000000"><span 
+class="ec-lmtt-10">}</span></span></pre>
+   
+<!--l. 302--><p class="noindent" >In this hypothetical case, “any extended precision bits will be
+lost in the ﬁrst calculation of a+b when it is assigned
+to x. The result of the second calculation of a+b may
+be held in a working register at the extended precision
+and potentially contain additional value bits not held
+in x, the result of the equality test then being false.” <a 
+ id="x1-14027"></a>
+Higham (<a 
+href="#cite.0@Higham2002">2002</a>) provides further examples of pathological
+cases.
+</p><!--l. 305--><p class="indent" >   K&#x0026;R C permitted the compiler to re-order ﬂoating-point
+expressions by associativity, which could run afoul of our
+limitations. ANSI C (C89), recognizing the issue introduced
+by this innocuous change, forbade such re-ordering (<a 
+ id="x1-14028"></a>
+MacDonald, <a 
+href="#cite.0@MacDonald1991">1991</a>). Compiler optimizations (e.g. GCC’s
+-O3) can bypass this restriction, once again breaking
+determinism;<span class="footnote-mark"><a 
+href="mss27.html#fn26x0"><sup class="textsuperscript">26</sup></a></span><a 
+ id="x1-14029f26"></a> 
+for instance, ﬂoating-point operations can be pipelined,
+leading to out-of-order execution.
+</p><!--l. 307--><p class="indent" >   The ﬂy in the ointment for Urbit’s deterministic computing
+is that jet-accelerated Nock equivalents must reliably produce
+the same results (both to each other and to Nock) regardless
+of the runtime on which it is being evaluated. Thus even small
+irregularities in ﬂoating-point implementations have macroscopic
+ramiﬁcations for deterministic computing. Any guarantee broken
+breaks them all, just as it would for a formal correctness
+                                                
+                                                
+proof.<span class="footnote-mark"><a 
+href="mss28.html#fn27x0"><sup class="textsuperscript">27</sup></a></span><a 
+ id="x1-14030f27"></a> 
+</p><!--l. 309--><p class="indent" >   The challenge of the lack of determinacy for certain critical
+applications has been acknowledged before, such as by James
+Demmel and the ReproBLAS team (<a 
+ id="x1-14031"></a> Ahrens, Nguyen, and
+Demmel, <a 
+href="#cite.0@ReproBLAS">2018</a><a 
+ id="x1-14032"></a> ; Demmel et al., <a 
+href="#cite.0@Demmel2017">n.d.</a>) and by <a 
+ id="x1-14033"></a> Dawson. Dawson
+makes much of the eﬀect of rounding modes and the option to
+disable subnormals, both of which would have major
+eﬀects on computational reproducibility. The situation
+is worse for transcendental functions, because there is
+necessarily truncation and/or rounding error (Dawson,
+<a 
+href="#cite.0@Dawson2013">2013</a>).
+</p><!--l. 312--><p class="indent" >   The ﬁeld of debate for possible solutions for implementing
+ﬂoating-point arithmetic which is portable across platforms
+includes:
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-14035x1">
+     <!--l. 315--><p class="noindent" >Hardware-supported ﬂoating-point arithmetic.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14037x2">
+     <!--l. 316--><p class="noindent" >Software-deﬁned ﬂoating-point library.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14039x3">
+     <!--l. 317--><p class="noindent" >Opaque calculations.
+     </p></li>
+<li 
+  class="enumerate" id="x1-14041x4">
+     <!--l. 318--><p class="noindent" >Stored results.
+                                                
+                                                
+     </p></li>
+<li 
+  class="enumerate" id="x1-14043x5">
+     <!--l. 319--><p class="noindent" >Proscribing IEEE 754.</p></li></ol>
+<!--l. 322--><p class="indent" >   We consider each in turn, with its ramiﬁcations for a
+deterministic computing platform and in particular its
+prospects for adoption in Nock-based systems.
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.1   </span> <a 
+ id="x1-150004.1"></a>Hardware-supported ﬂoating-point arithmetic</h4>
+<!--l. 326--><p class="noindent" >As outlined above, execution of software-equivalent
+ﬂoating-point computations produced from source by
+diﬀerent compilers on diﬀerent hardware architectures may
+lead to small diﬀerences in outcome, non-negligible for a
+deterministic computer. Thus, for this and a constellation
+of related reasons, hardware-supported ﬂoating-point
+arithmetic seems to be <span 
+class="ec-lmri-10">prima facie </span>unviable for deterministic
+computing.<span class="footnote-mark"><a 
+href="mss29.html#fn28x0"><sup class="textsuperscript">28</sup></a></span><a 
+ id="x1-15001f28"></a> 
+</p><!--l. 328--><p class="indent" >   We do not know the ﬁeld of possible future hardware
+architectures which Nock as a deterministic computing
+platform may be called upon to execute. Jet-accelerated code
+should be intelligently robust about its the hardware, but
+Hoon and Nock code should be completely agnostic to the
+hardware.
+                                                
+                                                
+</p><!--l. 330--><p class="indent" >   That’s the problem. What are some possible hardware-targeted
+solutions?
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-15003x1">
+     <!--l. 333--><p class="noindent" >Control  the  compiler  and  runtime  stack  top  to
+     bottom.
+     </p></li>
+<li 
+  class="enumerate" id="x1-15005x2">
+     <!--l. 334--><p class="noindent" >Store  a  hardware  and  compiler  tag  and  simulate
+     when not on that platform.
+     </p></li>
+<li 
+  class="enumerate" id="x1-15007x3">
+     <!--l. 335--><p class="noindent" >Support only a single hardware for the lifetime of a
+     ship.
+     </p></li>
+<li 
+  class="enumerate" id="x1-15009x4">
+     <!--l. 336--><p class="noindent" >Dock ﬂoating-point results.
+     </p></li>
+<li 
+  class="enumerate" id="x1-15011x5">
+     <!--l. 337--><p class="noindent" >Check consistency of results.</p></li></ol>
+   <h5 class="subsubsectionHead"><span class="titlemark">4.1.1   </span> <a 
+ id="x1-160004.1.1"></a>Control the stack</h5>
+<!--l. 342--><p class="noindent" >If you controlled the compiler and runtime execution stack to
+a suﬃcient degree, could you yield deterministic ﬂoating-point
+arithmetic from the hardware? “A translator that generates
+very high performance code is of no use if the ﬁnal behavior is
+incorrect” (<a 
+ id="x1-16001"></a> Jones, <a 
+href="#cite.0@Jones2008">2008</a>, p. 189); that is, optimizations often
+come at the cost of correctness.
+                                                
+                                                
+</p><!--l. 344--><p class="indent" >   To start oﬀ, what must be considered part of the stack in
+this sense? At a minimum, the compiler and linker toolchain
+(including ﬂags and options) and the actual runtime must be
+included. (This explicitly introduces a dependence between
+Martian software and Earthling software, repugnant to the
+Urbit ethos.)
+</p><!--l. 346--><p class="indent" >   We also must decide what the target is. Do we aim for the
+most portable conﬁguration (as determined by number of
+consumer or enterprise users)? Do we aim for the “closest”
+to IEEE 754 adherence? Do we aim for simplicity, or
+compilation speed, or any of a half-dozen other optimizable
+variables?
+</p><!--l. 348--><p class="indent" >   For instance, suppose that one intended to use the C keyword
+volatile to block certain common optimizations on a ﬂoating-point
+value.<span class="footnote-mark"><a 
+href="mss30.html#fn29x0"><sup class="textsuperscript">29</sup></a></span><a 
+ id="x1-16002f29"></a> 
+The runtime at the level of Nock does not know if a value is
+considered ﬂoating-point or not. At the level of a jet, the use
+of volatile can correctly bar certain hardware optimizations,
+but these need to be carefully enumerated and understood in
+the light of the other toolchain concerns enumerated in this
+section. Strictly speaking, volatile only seeks to guarantee that
+stale calculations are not inadvertently reused due to
+optimization. Without hardware optimization, the utility of an
+FLU for fast ﬂoating-point computations is questionable. The
+risk of a jet mismatch remains high, as does a nonportable
+                                                
+                                                
+jet.<span class="footnote-mark"><a 
+href="mss31.html#fn30x0"><sup class="textsuperscript">30</sup></a></span><a 
+ id="x1-16004f30"></a> 
+</p><!--l. 350--><p class="indent" >   Can the C-deﬁned ﬂoating-point environment (as supplied by
+fenv.h) answer to this need? This aﬀords the ability to specify
+not only rounding modes and access ﬂoating-point exception
+status ﬂags, but it is not clear whether this environmental
+control portably spans the entire output of ﬂoating-point
+computations.<span class="footnote-mark"><a 
+href="mss32.html#fn31x0"><sup class="textsuperscript">31</sup></a></span><a 
+ id="x1-16005f31"></a> 
+</p><!--l. 352--><p class="indent" >   Finally, “[a]n implementation is not required to provide a
+facility for altering the modes for translation-time arithmetic,
+or for making exception ﬂags from the translation available to
+the executing program” (<a 
+ id="x1-16007"></a> <a 
+href="#cite.0@Jones2008">ibid.</a>, p. 200). The information we
+purport to gain by controlling the stack in the manner above
+outlined is possibly not even available to the compiler and the
+runtime executable.
+</p><!--l. 354--><p class="indent" >   We suggest that deterministically correct stack control
+in the sense we have described here is impossible for
+an arbitrary conﬁguration of the modern hardware
+stack.<span class="footnote-mark"><a 
+href="mss33.html#fn32x0"><sup class="textsuperscript">32</sup></a></span><a 
+ id="x1-16008f32"></a> 
+                                                
+                                                
+</p>
+   <h5 class="subsubsectionHead"><span class="titlemark">4.1.2   </span> <a 
+ id="x1-170004.1.2"></a>Simulate the hardware</h5>
+<!--l. 358--><p class="noindent" >If you knew what the compiler and execution stack behavior
+looked like when a calculation was performed, could you
+reproduce it in software at need on a diﬀerent platform?
+</p><!--l. 360--><p class="indent" >   Hardware simulation faces some diﬃculties in the
+same vein as controlling the stack. The proposal yields a
+combinatorial explosion when considering the combinations of
+hardware chips, compilers, and compiler ﬂags. Nor is it clear
+that hardware documentation can be accrued in suﬃcient
+quantity and detail to guarantee the success of such a
+project.
+</p><!--l. 362--><p class="indent" >   The Urbit runtime provides an epoch system, meaning
+that the event log is separated into snapshots and subsequent
+events (<a 
+ id="x1-17001"></a> ~ mastyr-bottec, <a 
+href="#cite.0@UrbitEpoch">2020</a>). This is currently used to
+monitor the use of old binaries which could potentially have a
+jet mismatch. It would be moderately straightforward to
+extend this functionality to record the compilation ﬂags and
+architecture of that Vere binary, which could be useful in
+event playback. However, this remains an unsatisfactory
+solution because it would lead to Urbit runtime instances
+intentionally producing diﬀerent code (rather than a jet
+mismatch which would require correction).
+</p><!--l. 364--><p class="noindent" >
+</p>
+   <h5 class="subsubsectionHead"><span class="titlemark">4.1.3   </span> <a 
+ id="x1-180004.1.3"></a>Support a single hardware platform</h5>
+<!--l. 366--><p class="noindent" >A permanent commitment to a single hardware platform—either
+for the Urbit platform as a whole or for a particular running
+instance—could solve the determinism problem. This
+conﬁguration would be tenable for single-purpose ships with
+lifetime control (likely moons or comets), but inconvenient for
+the “hundred-year computer” model touted for planets and
+superior ranks in Urbit.
+</p><!--l. 368--><p class="indent" >
+     </p><blockquote class="quote">
+                                                
+                                                
+     <!--l. 369--><p class="noindent" >Marriage is a ﬁne institution, but I’m not ready
+     for an institution. (Mae West)</p></blockquote>
+<!--l. 372--><p class="indent" >   To make a lifelong commitment to a particular hardware
+platform when the lifetime of a deterministic computer is
+unknown is therefore deemed foolhardy.
+</p><!--l. 374--><p class="noindent" >
+</p>
+   <h5 class="subsubsectionHead"><span class="titlemark">4.1.4   </span> <a 
+ id="x1-190004.1.4"></a>Dock ﬂoating-point results</h5>
+<!--l. 376--><p class="noindent" >What about trimming ﬂoating-point values of their least
+signiﬁcant bits? When would this take place—at each step of a
+multi-step computation? At the level of single-bit rounding
+errors, this would potentially work, and amounts to selecting
+a rounding mode towards even (last digit 0). Accrual
+across multiple calculations could potentially render this
+unreliable, particularly if diﬀerent computational paths are
+supposed to lead to the same result and do not as a result of
+docking.
+</p><!--l. 378--><p class="indent" >   One could also envision docking more than the last bit.
+This introduces a step to check and adjust the ﬂoating-point
+value, and in addition breaks IEEE 754 compliance—at which
+point the trouble of trying to reconcile IEEE 754 with
+determinism fails.
+</p><!--l. 380--><p class="indent" >   In general, we cannot assign a high degree of signiﬁcance
+to ﬁgures beyond the ﬁrst few, but accruals across large
+data sets (such as large language models) can become
+signiﬁcant (as attested to by the need for compensated
+summation).
+</p><!--l. 382--><p class="indent" >   A related technique could pack bits of larger ﬂoating-point
+values into smaller ones, but this is functionally a software-deﬁned
+solution (see, e.g., <a 
+ id="x1-19001"></a> Brun (<a 
+href="#cite.0@LeBrun2018">2018</a>)).
+</p><!--l. 384--><p class="noindent" >
+</p>
+   <h5 class="subsubsectionHead"><span class="titlemark">4.1.5   </span> <a 
+ id="x1-200004.1.5"></a>Consistency checks</h5>
+                                                
+                                                
+<!--l. 386--><p class="noindent" >Another option is to compare Nock and jet code for every
+computation and only accept the C code if it is “correct”.
+This immediately runs into a very undesirable characteristic:
+every ﬂoating-point calculation is run twice, obviating at least
+one calculation and destroying any eﬃciency gains from
+jetting the code.
+</p><!--l. 388--><p class="indent" >   One could cache ﬂoating-point computations somewhere in the
+system.<span class="footnote-mark"><a 
+href="mss34.html#fn33x0"><sup class="textsuperscript">33</sup></a></span><a 
+ id="x1-20001f33"></a> 
+This is liable to become prohibitively large for systems as
+every individual FP calculation of all time becomes archived
+against future need.
+</p><!--l. 390--><p class="indent" >   We conclude that, at the current time, naïve
+hardware-deﬁned ﬂoating point is not viable for deterministic
+systems.
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.2   </span> <a 
+ id="x1-210004.2"></a>Software-deﬁned ﬂoating-point library</h4>
+<!--l. 394--><p class="noindent" >In the absence of a dedicated ﬂoating-point unit (FPU)
+and ﬂoating-point assembly instructions, ﬂoating-point
+computations are carried out in software. The type can be
+decomposed from bits, operated on, then packed back into the
+single type of appropriate value. For instance, prior to the
+widespread advent of 64-bit consumer hardware, applications
+running on PC architecture that needed double values
+utilized software emulation using two 32-bit numbers
+together.
+</p><!--l. 396--><p class="indent" >   Urbit’s current solution for ﬂoating-point computation is
+to utilize a software-deﬁned ﬂoating-point library, the
+SoftFloat library by <a 
+ id="x1-21001"></a> Hauser. SoftFloat is an implementation
+in software of a subset of IEEE 754 for ﬁve ﬂoating-point
+                                                
+                                                
+types.<span class="footnote-mark"><a 
+href="mss35.html#fn34x0"><sup class="textsuperscript">34</sup></a></span><a 
+ id="x1-21002f34"></a> 
+Urbit statically links the library into its runtime binary so it is
+always available for Nock to utilize as a jet.
+</p><!--l. 398--><p class="indent" >   While formally correct, software FP is slower than
+hardware FP, and likely prohibitively slow for many large
+matrix applications such as LLMs. (“Correctness is more
+important than performance.”) Performance is the dolorous
+stroke against software-deﬁned ﬂoating point. (On the other
+hand, some early versions of the Apple–IBM–Motorola
+PowerPC RISC architecture did not have dedicated
+hardware ﬂoating-point units (FPUs) or ﬂoating-point
+assembler instructions at all, requiring full software
+implementation.<span class="footnote-mark"><a 
+href="mss36.html#fn35x0"><sup class="textsuperscript">35</sup></a></span><a 
+ id="x1-21003f35"></a> )
+</p><!--l. 401--><p class="indent" >   An optimized portable deterministic software library for
+ﬂoating-point calculations may be a suﬃciently fast solution
+to meet Urbit’s needs even for vector computations. A
+diﬀerent avenue worthy of investigation is to take IEEE 754
+compliant ﬂoating-point values as inputs and outputs, then
+transform into a local representation for an optimized
+portable deterministic calculation. For instance, <a 
+ id="x1-21005"></a> Thall
+(<a 
+href="#cite.0@Thall2007">2007</a>) presents the concept of “unevaluated sums”, a
+generalized technique for accruing error in situations where
+additional precision is necessary for accuracy. However, even
+with an agreed-upon standard library like SoftFloat, it is
+important to keep in mind that exact ﬂoating-point results for
+transcendental functions are still not correctly known in many
+                                                
+                                                
+cases.<span class="footnote-mark"><a 
+href="mss37.html#fn36x0"><sup class="textsuperscript">36</sup></a></span><a 
+ id="x1-21006f36"></a> 
+This particular poses a problem for functions like
+<!--l. 401--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi class="qopname">sin</mi><mo> ⁡<!--FUNCTION APPLICATION--> </mo><!--nolimits--></math>
+which may be calculated by diﬀerent routes in Hoon/Nock and
+in C/Rust. For the time being, we conclude that Urbit’s
+discipline requires only using Hoon/Nock implementations of
+transcendental functions.
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.3   </span> <a 
+ id="x1-220004.3"></a>Opaque calculations</h4>
+<!--l. 405--><p class="noindent" >When a request for data is made over the network, one is not
+certain what the resulting data will be. Their value is
+epistemically opaque. In Urbit’s event log, the results of
+network calls are persisted as eﬀects in the modiﬁed state (for
+successful events).
+</p><!--l. 407--><p class="indent" >   What if Urbit treated a call that had a ﬂoating-point
+computation as if it were a network call, that is, as if it were a
+referentially opaque injection into Urbit’s state? One
+diﬀerence is that network calls result as side eﬀects from hints
+to the runtime which then handles the plumbing, as it were,
+and injects the resulting gift task back into Arvo as if a <span 
+class="ec-lmri-10">deus</span>
+<span 
+class="ec-lmri-10">ex machina</span>, from Arvo’s perspective. (It should of course
+know how to handle such a contingency.) There are two main
+objections that can be made here:
+</p><!--l. 409--><p class="indent" >
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-22002x1">
+     <!--l. 410--><p class="noindent" >From    the    programmer’s    standpoint,    every
+     ﬂoating-point computation would need to be bundled
+     as if it were a network call, and the result treated as if
+                                                
+                                                
+     it were a new move passed back into the kernel. This
+     destroys  synchronicity  and  changes  ﬂoating-point
+     computations from lightweight programmer choices
+     into heavy and occasional calls.
+     </p></li>
+<li 
+  class="enumerate" id="x1-22004x2">
+     <!--l. 412--><p class="noindent" >The storage of every result of every ﬂoating-point
+     computation could become prohibitively large. Work
+     on large matrices in numerical analysis or machine
+     learning  could  rapidly  balloon  the  event  log  since
+     every intermediate state would also become part of
+     the ship’s immutable history.</p></li></ol>
+<!--l. 415--><p class="indent" >   To the ﬁrst objection, we can point to the current design
+pattern utilized in scrying (or the request for values from
+the bound scry namespace). Local scry values (such as
+values exposed by a system service or vane) are accessed
+synchronously using the <code class="lstinline"><span style="color:#404040">.^</span></code> dotket operator. This is
+straightforward and easy to integrate into a program.
+Remote scry values must be requested asynchronously from
+another ship, and return at an indeterminate future time as
+<code class="lstinline"><span style="color:#000000">gift</span></code>s to be processed in another part of the vane or
+application.
+</p><!--l. 417--><p class="indent" >   To the second, we observe that although Urbit is a state
+machine whose history is part of its state, in practice we can
+mitigate event log growth by either <span 
+class="ec-lmri-10">chopping </span>the event log by
+storing its state and permitting replay forward from that point
+or <span 
+class="ec-lmri-10">tombstoning </span>data which should never be available
+again.<span class="footnote-mark"><a 
+href="mss38.html#fn37x0"><sup class="textsuperscript">37</sup></a></span><a 
+ id="x1-22005f37"></a> 
+</p><!--l. 419--><p class="indent" >   In this proposal, however, one could imagine a situation like
+that which obtains in scrying: fast software implementation
+treated synchronously, slow hardware acceleration treated
+asynchronously.
+                                                
+                                                
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.4   </span> <a 
+ id="x1-230004.4"></a>Stored results</h4>
+<!--l. 424--><p class="noindent" >Instead of repeating computations that have been made in the
+past, what if we cached the result of all of them, so that any
+new computations with the same values are guaranteed to
+result in the same value via a cache lookup instead of a
+calculation? Urbit uses memoization frequently in Arvo and in
+the runtime, so this is an aesthetically compatible option; we
+consider its feasibility.
+</p><!--l. 426--><p class="indent" >
+     </p><blockquote class="quote">
+     <!--l. 427--><p class="noindent" >A recently proposed hardware acceleration technique
+     is to store the results of previous multiplication
+     and division operations in a cache, reusing rather
+     than recalculating the result whenever possible.
+     (Dynamic proﬁling has found that a high percentage
+     of these operations share the same operands as
+     previous operations.) (<a 
+ id="x1-23001"></a> Jones, <a 
+href="#cite.0@Jones2008">2008</a>, p. 1148)<span class="footnote-mark"><a 
+href="mss39.html#fn38x0"><sup class="textsuperscript">38</sup></a></span><a 
+ id="x1-23002f38"></a> </p></blockquote>
+<!--l. 430--><p class="indent" >   On Urbit, this introduces an
+<!--l. 430--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>O</mi><mo 
+class="MathClass-open" stretchy="false">(</mo><mn>1</mn><mo 
+class="MathClass-close" stretchy="false">)</mo></math>
+average-case/<!--l. 430--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>O</mi><mo 
+class="MathClass-open" stretchy="false">(</mo><mi 
+>n</mi><mo 
+class="MathClass-close" stretchy="false">)</mo></math>
+worst-case cache lookup from a MurmurHash3 hash key
+calculation (what Urbit calls a <code class="lstinline"><span style="color:#000000">++mug</span></code>). This must be weighed
+against the ﬂoating-point algorithm in consideration, as well
+as what is actually hashed (likely the Nock of the calculation
+contained in the dynamic hint).
+</p><!--l. 432--><p class="indent" >   This bears some similarities to aspects of the network call
+suggestion above, in that the second objection to that one
+holds here. Event log and state bloat (via the cache) are
+liabilities. Such a cache would be a feature of the Arvo
+instance, not the runtime VM. Unlike a truncated event log,
+the cache must be a permanent feature of the ship’s state
+rather than a convenience.
+</p><!--l. 434--><p class="indent" >   “Storing results” could also be met by the use of
+                                                
+                                                
+SPARC-style logging. In that hardware platform, suspicious
+computations are ﬂagged and hashed into a lookup table
+by site in the originating program. Such events are
+logged not by timestamp or by computation hash but
+by callsite in the originating program (<a 
+ id="x1-23004"></a> Kahan, <a 
+href="#cite.0@Kahan1997">1997a</a>,
+p. 6).<span class="footnote-mark"><a 
+href="mss40.html#fn39x0"><sup class="textsuperscript">39</sup></a></span><a 
+ id="x1-23005f39"></a> 
+Sun implemented this in SPARC for “retrospective diagnostics”
+but the technique could allow a more lapidary operation for
+Urbit. (Follow-on considerations include whether such
+computations should now be considered “bound” in a sense
+like that of the scry namespace.)
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.5   </span> <a 
+ id="x1-240004.5"></a>Proscribing IEEE 754</h4>
+<!--l. 438--><p class="noindent" >What if the Scylla of IEEE 754 is avoided for some other
+Charybdis? We can approach this solution space at two levels:
+either by sector or entirely.
+</p>
+<!--l. 440--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-25000"></a><span 
+class="ec-lmbx-10">Proscribe by sector.</span></span>
+   One solution to the speed-vs.-reproducibility dilemma is to
+permit hardware-accelerated IEEE 754 operations, but only in
+a veriﬁed subset permissible for jets. This would require
+careful vetting of the hardware stack and compiler options to
+deﬁne a permissible subset of IEEE 754 operations as “known
+good”. Coupled with the epoch system, it may be a feasible
+solution.
+</p><!--l. 444--><p class="indent" >   What degree of vetting will reliably answer the gap
+between IEEE 754 and hardware implementation for any
+particular operation? <a 
+ id="x1-25001"></a> Jones (<a 
+href="#cite.0@Jones2008">2008</a>, pp. 330ﬀ.) and <a 
+ id="x1-25002"></a> Goldberg
+(<a 
+href="#cite.0@Goldberg1991">1991</a>) provide a careful analysis of accuracy errors inherent
+to IEEE 754 as a standard, but due to the variety of
+possible scenarios do not treat of real compilers and chipsets
+                                                
+                                                
+much.<span class="footnote-mark"><a 
+href="mss41.html#fn40x0"><sup class="textsuperscript">40</sup></a></span><a 
+ id="x1-25003f40"></a> 
+Trivially, as demonstrated above in the Python example,
+<!--l. 444--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mi 
+>a</mi> <mo 
+class="MathClass-bin">+</mo> <mi 
+>b</mi><mo 
+class="MathClass-close" stretchy="false">)</mo> <mo 
+class="MathClass-bin">+</mo> <mi 
+>c</mi><mo 
+class="MathClass-rel">≠</mo><mi 
+>a</mi> <mo 
+class="MathClass-bin">+</mo> <mo 
+class="MathClass-open" stretchy="false">(</mo><mi 
+>b</mi> <mo 
+class="MathClass-bin">+</mo> <mi 
+>c</mi><mo 
+class="MathClass-close" stretchy="false">)</mo></math>,
+and even modest reordering of operations by a zealous
+compiler optimization is susceptible of introducing
+nonportable and thus nondeterministic (in our sense)
+behavior.
+</p><!--l. 446--><p class="indent" >   Having identiﬁed an appropriate subset of operations, we
+may imagine that the use of #ifdef, Autotools’ conﬁgure, and
+a jetting library may answer to our need. Any jet library
+would have to be carefully constructed to avoid imposing
+tight discipline directly on the end user (modal Hoon
+author). We cannot recommend this path today but do not
+consider the way to be shut, especially given liberal use of
+volatile.
+</p><!--l. 448--><p class="indent" >   In particular, fused multiply-add operations are subject to
+reordering by an optimizing compiler. Avoiding these would
+require some discipline on the part of the jet developer, since
+code that does not explicitly fma may yet reduce to it in a
+compiler pass. A jetting library would be advantageous in this
+case.
+</p><!--l. 450--><p class="indent" >   As an example of a refactoring of IEEE 754 operations
+for determinism, consider the ReproBLAS project (last
+update ~2016.2.21). ReproBLAS seeks to produce a set
+of reproducible deterministic algorithms reﬂecting the
+standard operations of BLAS (<a 
+ id="x1-25004"></a> Ahrens, Nguyen, and
+Demmel, <a 
+href="#cite.0@ReproBLAS">2018</a>). It accomplishes this by introducing a binned
+data type and a set of basic operations carefully built
+on IEEE 754 for the objective of completely portable
+                                                
+                                                
+reproducibility.<span class="footnote-mark"><a 
+href="mss42.html#fn41x0"><sup class="textsuperscript">41</sup></a></span><a 
+ id="x1-25005f41"></a> 
+This is similar to our proposal for a vetted jetting library and
+may be worth attention, particularly in association with
+requirements around -O0.
+</p>
+<!--l. 452--><p class="noindent" ><span class="paragraphHead"><a 
+ id="x1-26000"></a><span 
+class="ec-lmbx-10">Proscribe by replacement.</span></span>
+   Finally, we face the possibility of jettisoning decades of
+ﬂoating-point libraries entirely and forging a new trail. We
+explicitly omit attempting to implement a new standard as
+hubristic, but would like to explore some alternatives.
+</p>
+<!--l. 456--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-27000"></a><span 
+class="ec-lmbx-10">Posits.</span></span>
+   In 2015, John Gustafson proposed a new
+standard for representing values drawn from
+<!--l. 458--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℝ</mi></math>
+called universal numbers or unums (<a 
+ id="x1-27001"></a> Group, <a 
+href="#cite.0@Posit2022">2022</a><a 
+ id="x1-27002"></a> ; Gustafson,
+<a 
+href="#cite.0@Gustafson2015">2015</a><a 
+ id="x1-27003"></a> , <a 
+href="#cite.0@Gustafson2017a">2017a</a><a 
+ id="x1-27004"></a> ,<a 
+href="#cite.0@Gustafson2017">b</a>). The current version of unums, called posits,
+supports interval arithmetic and greater resolution near 1.0, at
+the cost of decreased resolution for extremely large and
+extremely small values. Unums also guarantee associativity
+and distributivity of operations.
+</p><!--l. 460--><p class="indent" >   Gustafson’s criticisms of IEEE 754 focused on determinism
+and exactness; underﬂow and overﬂow; ﬁxed bit widths for
+mantissa and exponent; rounding; and the large wasted block
+of NaNs (<a 
+ id="x1-27005"></a> Risse, <a 
+href="#cite.0@Risse2016">2016</a>). Unums likewise must provide sign,
+exponent with bias, and signiﬁcand; they additionally signal
+whether the value is an interval. Unlike IEEE 754’s use of
+                                                
+                                                
+multiple bit widths, 32-bit posits are argued to be suﬃcient
+for almost all applications.
+</p><!--l. 462--><p class="indent" >   (<a 
+ id="x1-27006"></a> Gustafson, <a 
+href="#cite.0@Gustafson2015">2015</a>) (<a 
+ id="x1-27007"></a> Gustafson, <a 
+href="#cite.0@Gustafson2017">2017b</a>) (<a 
+ id="x1-27008"></a> Group, <a 
+href="#cite.0@Posit2022">2022</a>) (<a 
+ id="x1-27009"></a>
+Risse, <a 
+href="#cite.0@Risse2016">2016</a>)
+</p><!--l. 471--><p class="indent" >   A unum/posit implementation for Urbit would be
+as straightforward as the implementation of IEEE 754.
+For jetting, there is a software library for posits called
+SoftPosit based on the SoftFloat library (<a 
+ id="x1-27010"></a> Cerlane, <a 
+href="#cite.0@Cerlane2018">2018</a>). A
+number of other software implementations exist, but
+at the time of writing no hardware support has been
+noted. (Since there are no hardware implementations,
+the eﬀect of optimizations on determinism cannot yet
+be assessed; it is presumed that the situation will be
+better than IEEE 754 given the advantages of a clean
+slate.)
+</p>
+<!--l. 473--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-28000"></a><span 
+class="ec-lmbx-10">Hand-rolled ﬂoats.</span></span>
+   If IEEE 754 presents too many diﬃculties to be
+viable at high speed, then hand-rolling a custom hybrid
+hardware–software scheme via bitmasking could be attractive.
+This returns to the more “Wild West” days before IEEE 754’s
+introduction, but is presaged by the recent introduction
+of bﬂoat16, TensorFlow-32, and other types designed
+for machine learning applications. Without access to
+hardware manufacturers, however, this amounts in the end to
+software-deﬁned ﬂoating point and seems unlikely to
+be competitive speedwise. (We cite the idea put forth
+previously in this article to convert to an intermediate
+representation for computation, yielding IEEE 754 as
+necessary.)
+</p><!--l. 477--><p class="indent" >   It may also be worth considering the use of a 3-tuple
+of sign, exponent, and signiﬁcand (with only software
+jetting), and leave details of jet implementation to library
+authors.
+                                                
+                                                
+</p>
+<!--l. 479--><p class="indent" >   <span class="subparagraphHead"> <a 
+ id="x1-29000"></a><span 
+class="ec-lmbx-10">Fixed-point and </span><!--l. 479--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>ℚ</mi></math><span 
+class="ec-lmbx-10">.</span></span>
+   A ﬁxed-point representation diﬀers from a ﬂoating-point
+scheme in that the exponent is ﬁxed by the protocol or
+metadata and thus only the sign and signiﬁcand need
+be included in the bit representation. (With an oﬀset,
+even the sign can be elided.) The advantage of such a
+scheme is that it aﬀords the beneﬁts of ﬂoating-point
+mathematics at near-integer operation speeds (e.g. left-shift
+to multiply by two). One disadvantage is that there is
+a smallest representable value; this lack of subnormals
+requires either an underﬂow handler or the possibility
+of inadvertent division by zero. Fixed-point operations
+could also be used as intermediates in calculations.
+(This echoes once again the idea of conversion to an
+intermediate representation then conversion back out to IEEE
+754.)<span class="footnote-mark"><a 
+href="mss43.html#fn42x0"><sup class="textsuperscript">42</sup></a></span><a 
+ id="x1-29001f42"></a> 
+</p><!--l. 484--><p class="indent" >   If a rational number scheme is implemented, then a variety
+of possible implementations are possible, ranging from
+bitpacked ﬁxed-width integers to pairs of arbitrary-width
+integers. Reduction to “simplest” values introduces
+some overhead; fractions are formally an ordered pair
+<!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mi 
+>a</mi><mo 
+class="MathClass-punc">,</mo><mi 
+>b</mi><mo 
+class="MathClass-close" stretchy="false">)</mo></math> with
+<!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mi 
+>b</mi><mo 
+class="MathClass-rel">≠</mo><mn>0</mn></math>, but
+there is an equivalence class of multiples. (That is, if we write
+<!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mfrac><mrow 
+><mn>1</mn></mrow>
+<mrow 
+><mn>2</mn></mrow></mfrac></math> as
+<!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mn>1</mn><mo 
+class="MathClass-punc">,</mo><mn>2</mn><mo 
+class="MathClass-close" stretchy="false">)</mo></math>, we have also
+to consider <!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mn>2</mn><mo 
+class="MathClass-punc">,</mo><mn>4</mn><mo 
+class="MathClass-close" stretchy="false">)</mo></math>,
+<!--l. 484--><math 
+ xmlns="http://www.w3.org/1998/Math/MathML"  
+display="inline" ><mo 
+class="MathClass-open" stretchy="false">(</mo><mn>3</mn><mo 
+class="MathClass-punc">,</mo><mn>6</mn><mo 
+class="MathClass-close" stretchy="false">)</mo></math>,
+indeed an inﬁnite sequence of such ordered pairs.) Rational
+numbers are a superset of ﬂoating-point numbers and
+ﬁxed-point numbers, but accrue processing overhead due
+to dereferencing arbitrary integers and other aspects of
+                                                
+                                                
+computation on operations.
+</p><!--l. 486--><p class="indent" >   However, deviation from the proscription scheme, even
+inadvertently, would mean that a ship is considered invalid in
+a sense equivalent to double-booting or breaking the scry
+namespace. This option is deemed worth investigation, likely
+viable, but bearing unknown risks.
+</p>
+   <h4 class="subsectionHead"><span class="titlemark">4.6   </span> <a 
+ id="x1-300004.6"></a>Irregularities</h4>
+<!--l. 491--><p class="noindent" >Any approach to modeling real numbers runs the risk
+that diﬀerent calculation pathways will yield a diﬀerent
+kind of inexactness in the result. These can be mitigated
+by some of the approaches suggested above, and also
+by checking the correspondence of the Hoon code and
+the underlying jet, particular for known edge cases in
+behavior. While Hoon–jet compliance is an open research
+problem,<span class="footnote-mark"><a 
+href="mss44.html#fn43x0"><sup class="textsuperscript">43</sup></a></span><a 
+ id="x1-30001f43"></a> 
+we can apply principles of unit testing
+together with a period of testing Nock and jet
+compliance.<span class="footnote-mark"><a 
+href="mss45.html#fn44x0"><sup class="textsuperscript">44</sup></a></span><a 
+ id="x1-30002f44"></a> 
+</p><!--l. 493--><p class="indent" >   Jet mismatches have been rare in the current
+era.<span class="footnote-mark"><a 
+href="mss46.html#fn45x0"><sup class="textsuperscript">45</sup></a></span><a 
+ id="x1-30003f45"></a> 
+Some jet “mismatches” occur because the runtime raises a
+diﬀerent error than the corresponding Hoon—these are
+relatively innocuous. Others may occur because actually
+diﬀerent results are produced for diﬀerent input. These are
+grave, and ultimately motivated the introduction of the
+epoch system so that event log replays can take into
+                                                
+                                                
+account the previous less-perfect jet version in the runtime (<a 
+ id="x1-30005"></a>
+~ mastyr-bottec, <a 
+href="#cite.0@UrbitEpoch">2020</a>).
+</p>
+   <h3 class="sectionHead"><span class="titlemark">5   </span> <a 
+ id="x1-310005"></a>Linear Algebra in Hoon</h3>
+<!--l. 497--><p class="noindent" >Lagoon<span class="footnote-mark"><a 
+href="mss47.html#fn46x0"><sup class="textsuperscript">46</sup></a></span><a 
+ id="x1-31001f46"></a> 
+is an Urbit library to facilitate Hoon-native mathematical
+operations. It envisions six native types,
+     </p><ol  class="enumerate1" >
+<li 
+  class="enumerate" id="x1-31003x1">
+     <!--l. 500--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%real</span></code>, an IEEE 754 ﬂoating-point value
+     </p></li>
+<li 
+  class="enumerate" id="x1-31005x2">
+     <!--l. 501--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%uint</span></code>, an unsigned integer
+     </p></li>
+<li 
+  class="enumerate" id="x1-31007x3">
+     <!--l. 502--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%int2</span></code>, a twos-complement signed integer
+     </p></li>
+<li 
+  class="enumerate" id="x1-31009x4">
+     <!--l. 503--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%cplx</span></code>, a BLAS-compatible ordered pair
+     </p></li>
+<li 
+  class="enumerate" id="x1-31011x5">
+     <!--l. 504--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%unum</span></code>, a unum/posit value
+                                                
+                                                
+     </p></li>
+<li 
+  class="enumerate" id="x1-31013x6">
+     <!--l. 505--><p class="noindent" ><code class="lstinline"><span style="color:#000000">%fixp</span></code>, a ﬁxed-precision value</p></li></ol>
+<!--l. 508--><p class="noindent" >for which <code class="lstinline"><span style="color:#000000">%real</span></code> allows the rounding mode to be speciﬁed;
+<code class="lstinline"><span style="color:#000000">%cplx</span></code> consists of a pair of two values, real and imaginary
+parts; and <code class="lstinline"><span style="color:#000000">%fixp</span></code> requires the expected precision.
+</p><!--l. 511--><p class="indent" >   Lagoon implements algorithmically correct reference
+implementation in Hoon with the expectation that
+<code class="lstinline"><span style="color:#000000">/lib/lagoon</span></code> will be jetted. Operations include basic
+arithmetic, vector and matrix row/column operations, matrix
+multiplication, and matrix inversion. The jetting scheme may
+take advantage of software libraries or appropriate hardware, but
+must hew to the dictum that “if it’s not deterministic, it isn’t
+real.”<span class="footnote-mark"><a 
+href="mss48.html#fn47x0"><sup class="textsuperscript">47</sup></a></span><a 
+ id="x1-31014f47"></a> 
+</p><!--l. 513--><p class="indent" >   Lagoon has passed through several implementations and
+remains in active development. The current implementation is
+the lagoon branch of the urbit/urbit repository (<a 
+ id="x1-31017"></a> Urbit,
+<a 
+href="#cite.0@Urbit">2023</a>).
+</p>
+   <h3 class="sectionHead"><span class="titlemark">6   </span> <a 
+ id="x1-320006"></a>Conclusion</h3>
+<!--l. 518--><p class="noindent" >To summarize, the most promising solutions for ﬂoating-point
+mathematics on Urbit per the above analysis include:
+</p><!--l. 520--><p class="indent" >
+     </p><ol  class="enumerate1" >
+                                                
+                                                
+<li 
+  class="enumerate" id="x1-32002x1">
+     <!--l. 521--><p class="noindent" >Hardware FP on single machine for entire lifetime.
+     </p></li>
+<li 
+  class="enumerate" id="x1-32004x2">
+     <!--l. 522--><p class="noindent" >Optimized software FP with vetted jetting library.
+     </p></li>
+<li 
+  class="enumerate" id="x1-32006x3">
+     <!--l. 523--><p class="noindent" >Opaque calculation as callback.
+     </p></li>
+<li 
+  class="enumerate" id="x1-32008x4">
+     <!--l. 524--><p class="noindent" >Cached results by callsite.
+     </p></li>
+<li 
+  class="enumerate" id="x1-32010x5">
+     <!--l. 525--><p class="noindent" >Utilizing a subset of IEEE 754 in hardware.
+     </p></li>
+<li 
+  class="enumerate" id="x1-32012x6">
+     <!--l. 526--><p class="noindent" >Replacing  IEEE  754  with  another  approach  of
+     suﬃcient speed, ﬁxed-point and unum/posits chief
+     among these.</p></li></ol>
+<!--l. 529--><p class="indent" >   Several recent eﬀorts on Urbit have encountered the diﬃculties of
+producing fast and reliable ﬂoating-point calculations on a Nock-based
+system.<span class="footnote-mark"><a 
+href="mss49.html#fn48x0"><sup class="textsuperscript">48</sup></a></span><a 
+ id="x1-32013f48"></a> 
+                                                
+                                                
+We anticipate that, water ﬁnding its own level, each will adopt
+a suitable deterministic solution for evaluation in Nock.
+We do not anticipate these to be the last foundational
+numerical libraries built on Urbit, but instead among the ﬁrst.
+Thus we have documented the paths we have explored
+as an annotated map for future travelers in search of
+a one true representation for continuous mathematics.
+<img 
+src="ustj-logo.svg" alt="PIC"  
+width="337" height="337"  />
+</p>
+   <h3 class="sectionHead"><a 
+ id="x1-33000"></a>References</h3>
+<!--l. 532--><p class="noindent" >
+   </p><dl class="thebibliography"><dt id="X0-ReproBLAS" class="thebibliography">
+</dt><dd 
+id="bib-1" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@ReproBLAS"></a>Ahrens, Peter, Hong Diep Nguyen, and James Demmel
+   (2018). <span 
+class="ec-lmri-10">ReproBLAS: Reproducible Basic Linear Algebra</span>
+   <span 
+class="ec-lmri-10">Subprograms</span>.
+   </p></dd><dt id="X0-Andrysco2016" class="thebibliography">
+</dt><dd 
+id="bib-2" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Andrysco2016"></a>Andryso, Marc, Ranjit Jhala, and Sorin Lerner (2016).
+   “Printing Floating-Point Numbers: A Faster, Always
+   Correct Method”. In: <span 
+class="ec-lmri-10">Proceedings of the 43rd Annual</span>
+   <span 
+class="ec-lmri-10">ACM  SIGPLAN-SIGACT  Symposium  on  Principles</span>
+   <span 
+class="ec-lmri-10">of Programming Languages (POPL ’16)</span>, pp. 555–567.
+   <span class="small-caps">doi</span>: <a 
+href="https://doi.org/10.1145/2837614.2837654" ><span 
+class="ec-lmtt-10">10.1145/2837614.2837654</span></a>.
+   </p></dd><dt id="X0-Babuska1969" class="thebibliography">
+</dt><dd 
+id="bib-3" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Babuska1969"></a>Babuška,     Ivo     (1969).     “Numerical     stability
+   in mathematical analysis”. In: <span 
+class="ec-lmri-10">Information Processing</span>
+   68, pp. 11–23.
+   </p></dd><dt id="X0-Apple1994" class="thebibliography">
+</dt><dd 
+id="bib-4" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Apple1994"></a>Beesley,   Kenneth   R.   and   Dirk   Elzinga   (1994).
+   <span 
+class="ec-lmri-10">Inside Macintosh: PowerPC System Software</span>. Boston:
+   Addison-Wesley.
+                                                
+                                                
+   </p></dd><dt id="X0-LeBrun2018" class="thebibliography">
+</dt><dd 
+id="bib-5" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@LeBrun2018"></a>Brun,   Laurent   Le   (2018).   <span 
+class="ec-lmri-10">Making  ﬂoating  point</span>
+   <span 
+class="ec-lmri-10">numbers smaller</span>.
+   </p></dd><dt id="X0-Cerlane2018" class="thebibliography">
+</dt><dd 
+id="bib-6" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Cerlane2018"></a>Cerlane, Leong (2018). <span 
+class="ec-lmri-10">SoftPosit</span>. Git repository.
+   </p></dd><dt id="X0-Chohra2016" class="thebibliography">
+</dt><dd 
+id="bib-7" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Chohra2016"></a>Chohra, Chemseddine, Philippe Langlois, and David
+   Parello
+   (2016).  “Eﬃciency  of  Reproducible  Level  1  BLAS”.
+   In:  <span 
+class="ec-lmri-10">Scientiﬁc  Computing,  Computer  Arithmetic,  and</span>
+   <span 
+class="ec-lmri-10">Validated Numerics</span>. Ed. by Marco Nehmeier, Jürgen
+   Wolﬀ  von  Gudenberg,  and  Warwick  Tucker.  Cham:
+   Springer  International  Publishing,  pp. 99–108.  <span class="small-caps">isbn</span>:
+   978-3-319-31769-4.
+   </p></dd><dt id="X0-Citron1998" class="thebibliography">
+</dt><dd 
+id="bib-8" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Citron1998"></a>Citron,  D.,  D.  Feitelson,  and  L.  Rudolph  (1998).
+   “Accelerating multi-media processing by implementing
+   memoing   in   multiplication   and   division   units”.
+   In:  <span 
+class="ec-lmri-10">Proceedings  of  8th  International  Conference  on</span>
+   <span 
+class="ec-lmri-10">Architectural Support for Programming Languages and</span>
+   <span 
+class="ec-lmri-10">Operating Systems (ASPLOS-VIII)</span>, pp. 252–261.
+   </p></dd><dt id="X0-Dawson2013" class="thebibliography">
+</dt><dd 
+id="bib-9" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Dawson2013"></a>Dawson, Bruce (2013). <span 
+class="ec-lmri-10">Floating-Point Determinism</span>.
+   </p></dd><dt id="X0-Demmel2017" class="thebibliography">
+</dt><dd 
+id="bib-10" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Demmel2017"></a>Demmel, James et al. (n.d.).
+   </p></dd><dt id="X0-UWasm" class="thebibliography">
+</dt><dd 
+id="bib-11" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@UWasm"></a>~ dozreg-toplud (2023). <span 
+class="ec-lmri-10">UWasm</span>. Git repository.
+   </p></dd><dt id="X0-Edelman1997" class="thebibliography">
+</dt><dd 
+id="bib-12" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Edelman1997"></a>Edelman,  Alan  (1997).  “The  Mathematics  of  the
+   Pentium   Division   Bug”.   In:   <span 
+class="ec-lmri-10">SIAM  Review   </span>39.1,
+   pp. 54–67. <span class="small-caps">doi</span>: <a 
+href="https://doi.org/10.1137/S0036144595293959" ><span 
+class="ec-lmtt-10">10.1137/S0036144595293959</span></a>.
+                                                
+                                                
+   </p></dd><dt id="X0-Figueroa2000" class="thebibliography">
+</dt><dd 
+id="bib-13" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Figueroa2000"></a>Figueroa  del  Cid,  S. A.  (Jan.  2000).  “A  Rigorous
+   Framework for Fully Supporting the IEEE Standard for
+   Floating-Point Arithmetic in High-Level Programming
+   Languages”. PhD thesis. New York University.
+   </p></dd><dt id="X0-CPPRef" class="thebibliography">
+</dt><dd 
+id="bib-14" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@CPPRef"></a><span 
+class="ec-lmri-10">Floating-point environment </span>(2023).
+   </p></dd><dt id="X0-Foote1999" class="thebibliography">
+</dt><dd 
+id="bib-15" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Foote1999"></a>Foote, Brian and Joseph Yoder (1999). <span 
+class="ec-lmri-10">Big Ball of Mud</span>.
+   </p></dd><dt id="X0-Goldberg1991" class="thebibliography">
+</dt><dd 
+id="bib-16" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Goldberg1991"></a>Goldberg,
+   David (1991). “What Every Computer Scientist Should
+   Know  About  Floating-Point  Arithmetic”.  In:  <span 
+class="ec-lmri-10">ACM</span>
+   <span 
+class="ec-lmri-10">Computing Surveys </span>23.1, pp. 5–48.
+   </p></dd><dt id="X0-Posit2022" class="thebibliography">
+</dt><dd 
+id="bib-17" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Posit2022"></a>Group,  Posit  Working  (2022).  <span 
+class="ec-lmri-10">Standard  for  Posit</span><span 
+class="ec-lmri-10">™</span>
+   <span 
+class="ec-lmri-10">Arithmetic</span>. Tech. rep.
+   </p></dd><dt id="X0-Gustafson2015" class="thebibliography">
+</dt><dd 
+id="bib-18" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Gustafson2015"></a>Gustafson,   John   L.   (2015).   <span 
+class="ec-lmri-10">The  End  of  Error:</span>
+   <span 
+class="ec-lmri-10">Unum  Computing</span>.  A  K  Peters/CRC  Press.  <span class="small-caps">isbn</span>:
+   978-1-4822-3986-7.
+   </p></dd><dt id="X0-Gustafson2017a" class="thebibliography">
+</dt><dd 
+id="bib-19" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Gustafson2017a"></a>—   (2017a). <span 
+class="ec-lmri-10">Beyond Floating Point: Next Generation</span>
+   <span 
+class="ec-lmri-10">Computer Arithmetic (Stanford Seminar)</span>.
+   </p></dd><dt id="X0-Gustafson2017" class="thebibliography">
+</dt><dd 
+id="bib-20" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Gustafson2017"></a>—   (2017b). <span 
+class="ec-lmri-10">Posit Arithmetic</span>.
+   </p></dd><dt id="X0-Hauser2018" class="thebibliography">
+</dt><dd 
+id="bib-21" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Hauser2018"></a>Hauser, John R. (2018). <span 
+class="ec-lmri-10">Berkeley SoftFloat Release 3e</span>.
+   </p></dd><dt id="X0-Higham2002" class="thebibliography">
+</dt><dd 
+id="bib-22" class="thebibliography">
+                                                
+                                                
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Higham2002"></a>Higham, Nicholas J. (2002). <span 
+class="ec-lmri-10">Accuracy and Stability of</span>
+   <span 
+class="ec-lmri-10">Numerical Algorithms</span>. 2nd ed. Philadelphia: SIAM.
+   </p></dd><dt id="X0-IEEE754-2008" class="thebibliography">
+</dt><dd 
+id="bib-23" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@IEEE754-2008"></a>IEEE    (2008).    <span 
+class="ec-lmri-10">754-2008    IEEE    Standard    for</span>
+   <span 
+class="ec-lmri-10">Floating-Point Arithmetic</span>.
+   </p></dd><dt id="X0-ISO9899" class="thebibliography">
+</dt><dd 
+id="bib-24" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@ISO9899"></a>ISO/IEC  (2018).  <span 
+class="ec-lmri-10">ISO/IEC  9899:2018  Information</span>
+   <span 
+class="ec-lmri-10">technology – Programming languages – C</span>.
+   </p></dd><dt id="X0-Izquierdo2006" class="thebibliography">
+</dt><dd 
+id="bib-25" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Izquierdo2006"></a>Izquierdo, Luis R. and J. Gary Polhill (2006). “Is your
+   model susceptible to ﬂoating point errors?” In: <span 
+class="ec-lmri-10">Journal</span>
+   <span 
+class="ec-lmri-10">of Artiﬁcial Societies and Social Simulation </span>9.4.
+   </p></dd><dt id="X0-Jones2008" class="thebibliography">
+</dt><dd 
+id="bib-26" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Jones2008"></a>Jones,  Derek  M.  (2008).  <span 
+class="ec-lmri-10">The  New  C  Standard:  An</span>
+   <span 
+class="ec-lmri-10">Economic and Cultural Commentary</span>.
+   </p></dd><dt id="X0-Steele1991" class="thebibliography">
+</dt><dd 
+id="bib-27" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Steele1991"></a>Jr.,   Guy   L. Steele   and   Jon   L.   White   (1991).
+   “How to print ﬂoating-point numbers accurately”. In:
+   <span 
+class="ec-lmri-10">Proceedings of the 1990 ACM SIGPLAN Conference</span>
+   <span 
+class="ec-lmri-10">on Programming Language Design and Implementation</span>
+   <span 
+class="ec-lmri-10">(PLDI ’90)</span>, pp. 372–389.
+   </p></dd><dt id="X0-Kahan1965" class="thebibliography">
+</dt><dd 
+id="bib-28" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Kahan1965"></a>Kahan, William (1965). “Further remarks on reducing
+   truncation  errors”.  In:  <span 
+class="ec-lmri-10">Communications of the ACM</span>
+   8.1, p. 40. <span class="small-caps">doi</span>: <a 
+href="https://doi.org/10.1145/363707.363723" ><span 
+class="ec-lmtt-10">10.1145/363707.363723</span></a>.
+   </p></dd><dt id="X0-Kahan1997" class="thebibliography">
+</dt><dd 
+id="bib-29" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Kahan1997"></a>—   (1997a).  <span 
+class="ec-lmri-10">Lecture  Notes  on  the  Status  of  IEEE</span>
+   <span 
+class="ec-lmri-10">Standard 754 for Binary Floating-Point Arithmetic</span>.
+   </p></dd><dt id="X0-Kahan1997a" class="thebibliography">
+</dt><dd 
+id="bib-30" class="thebibliography">
+                                                
+                                                
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Kahan1997a"></a>—   (1997b). <span 
+class="ec-lmri-10">The Baleful Eﬀect of Computer Languages</span>
+   <span 
+class="ec-lmri-10">and Benchmarks upon Applied Mathematics, Physics</span>
+   <span 
+class="ec-lmri-10">and Chemistry (John von Neumann Lecture)</span>.
+   </p></dd><dt id="X0-Kharva2020" class="thebibliography">
+</dt><dd 
+id="bib-31" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Kharva2020"></a>Kharva,  Paresh  (2020).  <span 
+class="ec-lmri-10">TensorFloat-32  in  the  A100</span>
+   <span 
+class="ec-lmri-10">GPU Accelerates AI Training, HPC up to 20x</span>.
+   </p></dd><dt id="X0-KloudKoder2022" class="thebibliography">
+</dt><dd 
+id="bib-32" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@KloudKoder2022"></a>KloudKoder  (2022).  <span 
+class="ec-lmri-10">Floating-point  rounding  mode</span>
+   <span 
+class="ec-lmri-10">control prototyping (WebAssembly Issue #1456)</span>. Git
+   repository.
+   </p></dd><dt id="X0-MacDonald1991" class="thebibliography">
+</dt><dd 
+id="bib-33" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@MacDonald1991"></a>MacDonald,        Tom        (1991).        “C        for
+   Numerical Computing”. In: <span 
+class="ec-lmri-10">Journal of Supercomputing</span>
+   5.1, pp. 31–48. <span class="small-caps">doi</span>: <a 
+href="https://doi.org/10.1007/BF00155856" ><span 
+class="ec-lmtt-10">10.1007/BF00155856</span></a>.
+   </p></dd><dt id="X0-UrbitEpoch" class="thebibliography">
+</dt><dd 
+id="bib-34" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@UrbitEpoch"></a>~ mastyr-bottec (2020). <span 
+class="ec-lmri-10">Epoch System</span>.
+   </p></dd><dt id="X0-Monk2020" class="thebibliography">
+</dt><dd 
+id="bib-35" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Monk2020"></a>Monk, Philip C. (2020a). <span 
+class="ec-lmri-10">Urbit Precepts</span>.
+   </p></dd><dt id="X0-Monk2020a" class="thebibliography">
+</dt><dd 
+id="bib-36" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Monk2020a"></a>—   (2020b). <span 
+class="ec-lmri-10">Urbit Precepts (Discussion)</span>.
+   </p></dd><dt id="X0-Peters2021" class="thebibliography">
+</dt><dd 
+id="bib-37" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Peters2021"></a>Peters, Christoph (2021). <span 
+class="ec-lmri-10">fma: A faster, more accurate</span>
+   <span 
+class="ec-lmri-10">instruction</span>.
+   </p></dd><dt id="X0-Risse2016" class="thebibliography">
+</dt><dd 
+id="bib-38" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Risse2016"></a>Risse,  Thomas  (2016).  “It’s  Time  for  Unums—an
+   Alternative  to  IEEE  754  Floats  and  Doubles”.  In:
+   <span 
+class="ec-lmri-10">Proceedings of the Fifth International Conference on</span>
+   <span 
+class="ec-lmri-10">Signal &#x0026; Image Processing (SIP-2016)</span>, pp. 50–51.
+   </p></dd><dt id="X0-Thall2007" class="thebibliography">
+</dt><dd 
+id="bib-39" class="thebibliography">
+                                                
+                                                
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Thall2007"></a>Thall,      Andrew      (2007).      <span 
+class="ec-lmri-10">Extended-Precision</span>
+   <span 
+class="ec-lmri-10">Floating-Point Numbers for GPU Computation</span>. Tech.
+   rep. CIM-007-01. The University of North Carolina at
+   Chapel Hill.
+   </p></dd><dt id="X0-UrbitBreach" class="thebibliography">
+</dt><dd 
+id="bib-40" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@UrbitBreach"></a>Urbit (2020). <span 
+class="ec-lmri-10">The Last Network Breach</span>.
+   </p></dd><dt id="X0-Urbit" class="thebibliography">
+</dt><dd 
+id="bib-41" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Urbit"></a>—   (2023). <span 
+class="ec-lmri-10">Urbit</span>. Git repository.
+   </p></dd><dt id="X0-Wang2019" class="thebibliography">
+</dt><dd 
+id="bib-42" class="thebibliography">
+   <!--l. 532--><p class="noindent" ><a 
+ id="cite.0@Wang2019"></a>Wang,  Shibo  and  Pankaj  Kanwar  (2019).  <span 
+class="ec-lmri-10">BFloat16:</span>
+   <span 
+class="ec-lmri-10">The secret to high performance on Cloud TPUs</span>.</p></dd></dl>
+    
+</body> 
+</html>
+                                                
+
+

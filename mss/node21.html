@@ -1,0 +1,21 @@
+
+<H2><A ID="SECTION00052000000000000000">
+Software-defined floating-point library</A>
+</H2>
+
+<P>
+In the absence of a dedicated floating-point unit (FPU) and floating-point assembly instructions, floating-point computations are carried out in software.  The type can be decomposed from bits, operated on, then packed back into the single type of appropriate value.  For instance, prior to the widespread advent of 64-bit consumer hardware, applications running on PC architecture that needed <SPAN  CLASS="texttt">double</SPAN> values utilized software emulation using two 32-bit numbers together.
+
+<P>
+Urbit's current solution for floating-point computation is to utilize a software-defined floating-point library, the SoftFloat library by <#235#>Hauser2018<#235#>.  SoftFloat is an implementation in software of a subset of IEEE 754 for five floating-point types.<A ID="tex2html33"
+  HREF="footnode.html#foot333"><SUP><SPAN CLASS="arabic">32</SPAN></SUP></A>  Urbit statically links the library into its runtime binary so it is always available for Nock to utilize as a jet.
+
+<P>
+While formally correct, software FP is slower than hardware FP, and likely prohibitively slow for many large matrix applications such as LLMs.  (“Correctness is more important than performance.”)  Performance is the dolorous stroke against software-defined floating point.  (On the other hand, some early versions of the Apple–IBM–Motorola PowerPC RISC architecture did not have dedicated hardware floating-point units (FPUs) or floating-point assembler instructions at all, requiring full software implementation.<A ID="tex2html34"
+  HREF="footnode.html#foot334"><SUP><SPAN CLASS="arabic">33</SPAN></SUP></A>)
+
+<P>
+An optimized portable deterministic software library for floating-point calculations may be a sufficiently fast solution to meet Urbit's needs even for vector computations.  A different avenue worthy of investigation is to take IEEE 754 compliant floating-point values as inputs and outputs, then transform into a local representation for an optimized portable deterministic calculation.  For instance, <#238#>Thall2007<#238#> presents the concept of “unevaluated sums”, a generalized technique for accruing error in situations where additional precision is necessary for accuracy.  However, even with an agreed-upon standard library like SoftFloat, it is important to keep in mind that exact floating-point results for transcendental functions are still not correctly known in many cases.<A ID="tex2html35"
+  HREF="footnode.html#foot335"><SUP><SPAN CLASS="arabic">34</SPAN></SUP></A>  This particular poses a problem for functions like <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline432#</SPAN> which may be calculated by different routes in Hoon/Nock and in C/Rust.  For the time being, we conclude that Urbit's discipline requires only using Hoon/Nock implementations of transcendental functions.
+
+<P>

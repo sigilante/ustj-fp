@@ -1,0 +1,12 @@
+
+<H5><A ID="SECTION00055022000000000000">
+Hand-rolled <SPAN  CLASS="texttt">float</SPAN>s.</A>
+</H5>
+
+<P>
+If IEEE 754 presents too many difficulties to be viable at high speed, then hand-rolling a custom hybrid hardware–software scheme via bitmasking could be attractive.  This returns to the more “Wild West” days before IEEE 754's introduction, but is presaged by the recent introduction of <SPAN  CLASS="texttt">bfloat16</SPAN>, <SPAN  CLASS="texttt">TensorFlow-32</SPAN>, and other types designed for machine learning applications.  Without access to hardware manufacturers, however, this amounts in the end to software-defined floating point and seems unlikely to be competitive speedwise.  (We cite the idea put forth previously in this article to convert to an intermediate representation for computation, yielding IEEE 754 as necessary.)
+
+<P>
+It may also be worth considering the use of a 3-tuple of sign, exponent, and significand (with only software jetting), and leave details of jet implementation to library authors.
+
+<P>

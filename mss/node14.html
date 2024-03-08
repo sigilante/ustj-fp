@@ -1,0 +1,85 @@
+
+<H1><A ID="SECTION00050000000000000000">
+Deterministic Computation with a Fractional Part</A>
+</H1>
+
+<P>
+Non-real arithmetic is less significant for many of the core operations of Urbit as a personal server platform.  However, gaming, machine learning, graphics, and other applications rely on floating-point calculations—preferably as fast as possible.  In fact, not only applications-oriented processes rely on determinism:  guarantees in cryptography and contractual correctness for web3; verification and validation; accounting and legal compliance; and code correctness analysis all require reproducible determinism.<A ID="tex2html24"
+  HREF="footnode.html#foot157"><SUP><SPAN CLASS="arabic">23</SPAN></SUP></A>
+<P>
+Why can't we just allow different results in the last binary places of the significand?  Philosophically, Urbit holds the following statements as bedrock truth <#158#>Monk2020<#158#>:
+
+<P>
+
+<OL>
+<LI>A10.  Correctness is more important than performance.
+</LI>
+<LI>A12.  Correctness is more important than optimality.
+</LI>
+<LI>A14.  Deterministic beats heuristic.
+</LI>
+<LI>F1.  If it's not deterministic, it isn't real.
+</LI>
+</OL>
+
+<P>
+Urbit makes much of avoiding the “ball of mud” “standard software architecture” <#161#>Foote1999<#161#>.  In this design anti-pattern, a lack of guarantees and predictable behavior leads <SPAN  CLASS="textit">inevitably</SPAN> to haphazard and illegible software bloat <#163#>Foote1999<#163#>.  We can thus understand why Urbit as a platform considers even deviations in the last bit of a significand to be threads fraying the edge of sanity <#164#>Monk2020a<#164#>:
+
+<P>
+<BLOCKQUOTE>
+If you do the same thing twice, your computer should react the same way.  This is comforting.  This is also what makes it easy to reason about and use effectively.  If you're not sure what your computer will do, you'll be afraid of it and act defensively toward it.  This inevitably leads to a big ball of mud.
+
+</BLOCKQUOTE>
+
+<P>
+For most purposes in the broader software world, tightly reproducible precision has not been a high priority.  Precision having already been sacrificed, the gist of the calculation is more important than the fourth decimal place (e.g. in realtime 3D graphics).  This leads the phrase “implements the IEEE 754 standard” to be interpreted erroneously to imply full reproducibility <#167#>Figueroa2000<#167#>.
+
+<P>
+For example, consider the expression <tex2html_verbatim_mark>#math44#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline396#</SPAN>.  If a compiler permits the two operations to be evaluated sequentially (a multiplication followed by an addition), then rounding occurs twice.  If a compiler optimizes the operation into an FMA, or fused multiply-add, then a single rounding occurs.  <#168#>Peters2021<#168#> presents a pathological case for 32-bit single-precision floating-point values:  <tex2html_verbatim_mark>#math45#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline398#</SPAN>, <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline400#</SPAN>, and <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline402#</SPAN>.  In this case, the two-stage operation wipes out the <tex2html_verbatim_mark>#math46#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline404#</SPAN> component of <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline406#</SPAN>, yielding <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline408#</SPAN> as an integer.  Then <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline410#</SPAN> is added and the result is <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline412#</SPAN>.  With FMA as a single-step operation, the (correct) answer <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline414#</SPAN> is obtained.  The optimization is more correct than the naïve route in this case.
+
+<P>
+However, in another example due to <#169#>Dawson2013<#169#>, FMA yields incorrect results:  for <tex2html_verbatim_mark>#math47#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline416#</SPAN> with <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline418#</SPAN> and <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline420#</SPAN>, the answer should be zero, and calculated in two steps will typically be zero.  With a fused multiply-add, however, the code becomes <SPAN  CLASS="texttt">fmadd(a, b, c*d)</SPAN>, rounding the multiplication of <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline422#</SPAN> and <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline424#</SPAN> but not that of <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline426#</SPAN> and <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline428#</SPAN>; the answer will likely not be zero.
+
+<P>
+The situation grows more ambiguous across architectures.  [p.~346]<#171#>Jones2008<#171#> presents the pathological case of a compliant platform that may use extended precision bits in the calculation of <SPAN  CLASS="texttt">a + b</SPAN>:
+
+<P>
+<#173#>language=C<#173#>
+<PRE><tex2html_verbatim_mark>lstlisting36#</PRE>
+
+<P>
+
+In this hypothetical case, “any extended precision bits will be lost in the first calculation of a+b when it is assigned to x. The result of the second calculation of a+b may be held in a working register at the extended precision and potentially contain additional value bits not held in x, the result of the equality test then being false.”  <#176#>Higham2002<#176#> provides further examples of pathological cases.
+
+<P>
+K<tex2html_ampersand_mark>R C permitted the compiler to re-order floating-point expressions by associativity, which could run afoul of our limitations.  ANSI C (C89), recognizing the issue introduced by this innocuous change, forbade such re-ordering <#177#>MacDonald1991<#177#>.  Compiler optimizations (e.g. GCC's <SPAN  CLASS="texttt">-O3</SPAN>) can bypass this restriction, once again breaking determinism;<A ID="tex2html25"
+  HREF="footnode.html#foot326"><SUP><SPAN CLASS="arabic">24</SPAN></SUP></A> for instance, floating-point operations can be pipelined, leading to out-of-order execution.
+
+<P>
+The fly in the ointment for Urbit's deterministic computing is that jet-accelerated Nock equivalents must reliably produce the same results (both to each other and to Nock) regardless of the runtime on which it is being evaluated.  Thus even small irregularities in floating-point implementations have macroscopic ramifications for deterministic computing.  Any guarantee broken breaks them all, just as it would for a formal correctness proof.<A ID="tex2html26"
+  HREF="footnode.html#foot180"><SUP><SPAN CLASS="arabic">25</SPAN></SUP></A>
+<P>
+The challenge of the lack of determinacy for certain critical applications has been acknowledged before, such as by James Demmel and the <SPAN  CLASS="texttt">ReproBLAS</SPAN> team <#182#>Demmel2017, ReproBLAS<#182#> and by <#183#>Dawson2013<#183#>.  Dawson makes much of the effect of rounding modes and the option to disable subnormals, both of which would have major effects on computational reproducibility.  The situation is worse for transcendental functions, because there is necessarily truncation and/or rounding error <#184#>Dawson2013<#184#>.
+
+<P>
+The field of debate for possible solutions for implementing floating-point arithmetic which is portable across platforms includes:
+
+<P>
+
+<OL>
+<LI>Hardware-supported floating-point arithmetic.
+</LI>
+<LI>Software-defined floating-point library.
+</LI>
+<LI>Opaque calculations.
+</LI>
+<LI>Stored results.
+</LI>
+<LI>Proscribing IEEE 754.
+</LI>
+</OL>
+
+<P>
+We consider each in turn, with its ramifications for a deterministic computing platform and in particular its prospects for adoption in Nock-based systems.
+
+<P>

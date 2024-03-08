@@ -1,0 +1,12 @@
+
+<H5><A ID="SECTION00031034000000000000">
+Out-of-sequence computations.</A>
+</H5>
+
+<P>
+A modern compiler using optimization flags or even modest parallelism can easily cause a floating-point calculation to rely on operands that were produced in an order different than that specified in the code.  This is largely opaque to the programmer, aside from some simple heuristics, and makes it difficult to reproduce or reason about the fine details of computations.
+
+<P>
+As demonstrated above, out-of-sequence or resequenced computations can affect results due to rounding behavior and the “numerical horizon” which results between values.  These can happen due to multithreaded computation or an optimizing compiler.
+
+<P>

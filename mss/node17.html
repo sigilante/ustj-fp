@@ -1,0 +1,15 @@
+
+<H3><A ID="SECTION00051200000000000000">
+Simulate the hardware</A>
+</H3>
+
+<P>
+If you knew what the compiler and execution stack behavior looked like when a calculation was performed, could you reproduce it in software at need on a different platform?
+
+<P>
+Hardware simulation faces some difficulties in the same vein as controlling the stack.  The proposal yields a combinatorial explosion when considering the combinations of hardware chips, compilers, and compiler flags.  Nor is it clear that hardware documentation can be accrued in sufficient quantity and detail to guarantee the success of such a project.
+
+<P>
+The Urbit runtime provides an epoch system, meaning that the event log is separated into snapshots and subsequent events <#224#>UrbitEpoch<#224#>.  This is currently used to monitor the use of old binaries which could potentially have a jet mismatch.  It would be moderately straightforward to extend this functionality to record the compilation flags and architecture of that Vere binary, which could be useful in event playback.  However, this remains an unsatisfactory solution because it would lead to Urbit runtime instances intentionally producing different code (rather than a jet mismatch which would require correction).
+
+<P>

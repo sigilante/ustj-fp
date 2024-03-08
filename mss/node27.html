@@ -1,0 +1,21 @@
+
+<H5><A ID="SECTION00055021000000000000">
+Posits.</A>
+</H5>
+
+<P>
+In 2015, John Gustafson proposed a new standard for representing values drawn from <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline444#</SPAN> called universal numbers or unums <#274#>Gustafson2015, Gustafson2017, Gustafson2017a, Posit2022<#274#>.  The current version of unums, called posits, supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
+
+<P>
+Gustafson's criticisms of IEEE 754 focused on determinism and exactness; underflow and overflow; fixed bit widths for mantissa and exponent; rounding; and the large wasted block of NaNs <#275#>Risse2016<#275#>.  Unums likewise must provide sign, exponent with bias, and significand; they additionally signal whether the value is an interval.  Unlike IEEE 754's use of multiple bit widths, 32-bit posits are argued to be sufficient for almost all applications.
+
+<P>
+<#276#>Gustafson2015<#276#>
+<#277#>Gustafson2017<#277#>
+<#278#>Posit2022<#278#>
+<#279#>Risse2016<#279#>
+
+<P>
+A unum/posit implementation for Urbit would be as straightforward as the implementation of IEEE 754.  For jetting, there is a software library for posits called SoftPosit based on the SoftFloat library <#280#>Cerlane2018<#280#>.  A number of other software implementations exist, but at the time of writing no hardware support has been noted.  (Since there are no hardware implementations, the effect of optimizations on determinism cannot yet be assessed; it is presumed that the situation will be better than IEEE 754 given the advantages of a clean slate.)
+
+<P>

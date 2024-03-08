@@ -72,7 +72,7 @@ SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
 where \texttt{S} is the sign bit, \texttt{0} for positive ($+$) and \texttt{1} for negative ($-$); \texttt{E} is the exponent in base-2 (8 bits); and \texttt{F} is the significand (23 bits).  The exponent is actually calculated at an offset bias of 127 ($2^{7}$) so that a more expressive range of orders of magnitude can be covered.  The significand has an implied leading \texttt{1} bit unless all are zero.  To wit,
 
 $$
-(-1)^{\texttt{S}} \times 2^{\texttt{E}-127} \times 1.\texttt{F}
+(-1)^{\mathtt{S}} \times 2^{\mathtt{E}-127} \times 1.\mathtt{F}
 $$
 \noindent
 IEEE 754 specifies operations between numbers, including of different magnitudes.  The standard dictates behavior and provides outlines for arithmetic, but leaves algorithmic details to the implementation.  Numbers are normalized by adjusting the exponent of the smaller operand and aligning the significands, then the operations are carried out.  In practice, extended precision values are used in the intermediate steps of many algorithms, leading to greater accuracy than would otherwise be expected.\footnote{“Each of the computational operations that return a numeric result specified by this standard shall be performed as if it first produced an intermediate result correct to infinite precision and with unbounded range, and then rounded that intermediate result, if necessary, to fit in the destination’s format.”  \citep{IEEE754-2008}  Note that, per \citeauthor{Risse2016}, “there is no indication whether or not a computation with IEEE 754 is exact even if all arguments are.”  The ISO/IEC9899 C standard confesses its own fallibility:  “The floating-point model is intended to clarify the description of each floating-point characteristic and does not require the floating-point arithmetic of the implementation to be identical” \citep[fn.~21]{ISO9899}.}
@@ -95,7 +95,7 @@ IEEE 754 floating-point arithmetic and its predecessors have some significant ma
 
 \begin{enumerate}
   \item  The distance between two adjacent values changes based on the magnitude of the exponent and the distance from zero.  (The significand resolution stays the same but the exponent changes.)
-  \item  There is a relative approximation error for a given bitwidth in IEEE 754, called the \emph{machine epsilon}.\footnote{Note that this is different from the smallest representable value for a given bit width; e.g., for 32-bit single-precision \texttt{float} the smallest representable value is $\texttt{0000.0000.0000.0000.0000.0000.0000.0001} = 1\times 10^{-45}$.}
+  \item  There is a relative approximation error for a given bitwidth in IEEE 754, called the \emph{machine epsilon}.\footnote{Note that this is different from the smallest representable value for a given bit width; e.g., for 32-bit single-precision \texttt{float} the smallest representable value is $\mathtt{0000.0000.0000.0000.0000.0000.0000.0001} = 1\times 10^{-45}$.}
   \item  Operations between numbers of different magnitudes are particularly affected by their relative numerical horizon.
 \end{enumerate}
 
@@ -103,7 +103,7 @@ IEEE 754 floating-point arithmetic and its predecessors have some significant ma
 
 For most values of the exponent \texttt{E}, the difference between two discrete values is determined by the absolute magnitude of the significand \texttt{S}.  The difference between serial values is
 \begin{align}
-  \Delta\texttt{S} &= \texttt{000.0000.0000.0000.0000.0001}_{2} \nonumber \\
+  \Delta\mathtt{S} &= \mathtt{000.0000.0000.0000.0000.0001}_{2} \nonumber \\
   & = 1.00000011920928955078125 - 1.0 \nonumber \\
   & = 0.00000011920928955078125 \nonumber \\
   & = 2^{-23}\textrm{.}
@@ -118,7 +118,7 @@ This is multipled by the the result of the exponent \texttt{E} and the bias, mea
 \label{fig:fp-res}
 \end{figure}
 
-However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the \emph{relative shift} in exponent $\Delta\texttt{E}$.  For $\texttt{E} = 2$, for instance, the difference between serial values is $2^{-21}$.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
+However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the \emph{relative shift} in exponent $\Delta\mathtt{E}$.  For $\mathtt{E} = 2$, for instance, the difference between serial values is $2^{-21}$.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
 % https://www.h-schmidt.net/FloatConverter/IEEE754.html
 
 Truncation error results from terminating repeating “binaries” (by analogy with “decimals”).  Just as $\frac{1}{3} = 0.\bar{3} = 0.3333…$ has a finite precision when written in base-10, numbers that are not precise powers of two result in repeating fractions.  These necessarily terminate at the resolution of the significand.  The number and nature of truncation and rounding can significantly affect the accuracy of floating-point arithmetic and algorithms \citep{Izquierdo2006}.

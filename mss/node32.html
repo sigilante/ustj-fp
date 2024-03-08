@@ -1,0 +1,31 @@
+
+<H1><A ID="SECTION00070000000000000000">
+Conclusion</A>
+</H1>
+
+<P>
+To summarize, the most promising solutions for floating-point mathematics on Urbit per the above analysis include:
+
+<P>
+
+<OL>
+<LI>Hardware FP on single machine for entire lifetime.
+</LI>
+<LI>Optimized software FP with vetted jetting library.
+</LI>
+<LI>Opaque calculation as callback.
+</LI>
+<LI>Cached results by callsite.
+</LI>
+<LI>Utilizing a subset of IEEE 754 in hardware.
+</LI>
+<LI>Replacing IEEE 754 with another approach of sufficient speed, fixed-point and unum/posits chief among these.
+</LI>
+</OL>
+
+<P>
+Several recent efforts on Urbit have encountered the difficulties of producing fast and reliable floating-point calculations on a Nock-based system.<A ID="tex2html46"
+  HREF="footnode.html#foot343"><SUP><SPAN CLASS="arabic">45</SPAN></SUP></A>  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics. <#307#><#307#>
+
+<P>
+

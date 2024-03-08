@@ -1,0 +1,21 @@
+
+<H2><A ID="SECTION00054000000000000000"><tex2html_anchor_invisible_mark></A>
+<A ID="stored-results"><tex2html_anchor_mark></A><BR>
+Stored results
+</H2>
+
+<P>
+Instead of repeating computations that have been made in the past, what if we cached the result of all of them, so that any new computations with the same values are guaranteed to result in the same value via a cache lookup instead of a calculation?  Urbit uses memoization frequently in Arvo and in the runtime, so this is an aesthetically compatible option; we consider its feasibility.
+
+<P>
+<BLOCKQUOTE>
+A recently proposed hardware acceleration technique is to store the results of previous multiplication and division operations in a cache, reusing rather than recalculating the result whenever possible. (Dynamic profiling has found that a high percentage of these operations share the same operands as previous operations.)  [p.~1148]<#253#>Jones2008<#253#><A ID="tex2html37"
+  HREF="footnode.html#foot336"><SUP><SPAN CLASS="arabic">36</SPAN></SUP></A> <tex2html_comment_mark>19
+
+</BLOCKQUOTE>
+
+<P>
+On Urbit, this introduces an <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline434#</SPAN> average-case/<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline436#</SPAN> worst-case cache lookup from a MurmurHash3 hash key calculation (what Urbit calls a <tex2html_verblst_mark>10<tex2html_verb_mark>Kahan1997.<A ID="tex2html38"
+  HREF="footnode.html#foot256"><SUP><SPAN CLASS="arabic">37</SPAN></SUP></A>  Sun implemented this in SPARC for “retrospective diagnostics” but the technique could allow a more lapidary operation for Urbit.  (Follow-on considerations include whether such computations should now be considered “bound” in a sense like that of the scry namespace.)
+
+<P>

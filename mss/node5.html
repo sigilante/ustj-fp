@@ -1,0 +1,33 @@
+
+<H4><A ID="SECTION00031010000000000000">
+Variable precision and truncation error.</A>
+</H4>
+
+<P>
+For most values of the exponent <SPAN  CLASS="texttt">E</SPAN>, the difference between two discrete values is determined by the absolute magnitude of the significand <SPAN  CLASS="texttt">S</SPAN>.  The difference between serial values is
+<BR>
+<tex2html_image_mark>#align83#
+<BR>
+
+<P>
+
+This is multipled by the the result of the exponent <SPAN  CLASS="texttt">E</SPAN> and the bias, meaning that for each exponent value the difference between subsequent values changes.  (Figure <A HREF=<tex2html_cr_mark>#fig:fp-res#91><tex2html_cr_mark></A> represents this schematically.)
+
+<P>
+
+<DIV class="CENTER"><A ID="fig:fp-res"><tex2html_anchor_mark></A><A ID="94"><tex2html_anchor_mark></A>
+<TABLE>
+<CAPTION class="BOTTOM"><STRONG><#1764#>Figure<#1764#>:</STRONG>
+<#1765#>Schematic representation of granularity and variable precision of floating-point values and their relationship to the (continuous) set of real numbers.<#1765#></CAPTION>
+<TR><TD>[width=]<#93#>img/fp-res<#93#></TD></TR>
+</TABLE>
+</DIV>
+
+
+<P>
+However, for normalized numbers, or numbers that are left-shifted or right-shifted in order to carry out a calculation, values are determined by the <SPAN  CLASS="textit">relative shift</SPAN> in exponent <tex2html_verbatim_mark>#math39#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline382#</SPAN>.  For <tex2html_verbatim_mark>#math40#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline384#</SPAN>, for instance, the difference between serial values is <SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline386#</SPAN>.  This variable precision means that the precision of floating-point values varies across the range of representable numbers when operations take place.  Operations between two numbers of fairly different precisions are particularly vulnerable to accuracy loss, although some numerical techniques can be employed to mitigate.
+
+<P>
+Truncation error results from terminating repeating “binaries” (by analogy with “decimals”).  Just as <tex2html_verbatim_mark>#math41#<SPAN CLASS="MATH"><tex2html_image_mark>#tex2html_wrap_inline388#</SPAN> has a finite precision when written in base-10, numbers that are not precise powers of two result in repeating fractions.  These necessarily terminate at the resolution of the significand.  The number and nature of truncation and rounding can significantly affect the accuracy of floating-point arithmetic and algorithms <#104#>Izquierdo2006<#104#>.
+
+<P>

@@ -1,0 +1,14 @@
+
+<H2><A ID="SECTION00051000000000000000">
+Hardware-supported floating-point arithmetic</A>
+</H2>
+
+<P>
+As outlined above, execution of software-equivalent floating-point computations produced from source by different compilers on different hardware architectures may lead to small differences in outcome, non-negligible for a deterministic computer.  Thus, for this and a constellation of related reasons, hardware-supported floating-point arithmetic seems to be <SPAN  CLASS="textit">prima facie</SPAN> unviable for deterministic computing.<A ID="tex2html27"
+  HREF="footnode.html#foot327"><SUP><SPAN CLASS="arabic">26</SPAN></SUP></A>  Control the compiler and runtime stack top to bottom.
+  Store a hardware and compiler tag and simulate when not on that platform.
+  Support only a single hardware for the lifetime of a ship.
+  Dock floating-point results.
+  Check consistency of results.
+
+<P>

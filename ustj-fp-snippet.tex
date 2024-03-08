@@ -1,0 +1,23 @@
+
+As an example, $16 + 4 \approx \texttt{add}(16, 4)$ is carried out as:
+% https://cse.hkust.edu.hk/~cktang/cs180/notes/lec21.pdf
+\begin{enumerate}
+  \item  \begin{enumerate}
+           \item  $16_{10} = \texttt{0100.0001.1000.0000.0000.0000.0000.0000}_{2}$
+           \item  $ 4_{10} = \texttt{0100.0000.1000.0000.0000.0000.0000.0000}_{2}$
+           \item  Larger exponent in $16_{10}$ = $\texttt{1000.0011}_{2}$ → $131 - 127 = 4$, $2^4$
+           \item  $ \texttt{S}_{4_{10}} = \texttt{rsh}(\texttt{0100.0000.1000.0000.0000.0000.0000.0000}_{2}) = TODO here \texttt{0100.0000.1000.0000.0000.0000.0000.0000}_{2}$
+         \end{enumerate}
+  \item  \begin{enumerate}
+           \item  Significand of $16_{10} = \texttt{[1]000.0000.0000.0000.0000}_{2}$
+           \item  Significand of $ 4_{10} = \texttt{[1]000.0000.0000.0000.0000}_{2}$
+           \item  $\texttt{S}_{16_{10}} + \texttt{S}_{4_{10}} = \texttt{[1]000.0000.0000.0000.0000}_{2} + \texttt{[1]000.0000.0000.0000.0000}_{2} = \texttt{1.0000.0000.0000.0000.0000}_{2}$
+         \end{enumerate}
+  \item  \begin{enumerate}
+           \item  Significand:  $\texttt{S}_{\textrm{result}} = \texttt{rsh}(\texttt{1.0000.0000.0000.0000.0000}_{2}) = \texttt{1000.0000.0000.0000.0000}_{2}$
+           \item  Exponent:  $\texttt{E}_{\textrm{result}} = \texttt{}_{2}\texttt{++}
+           \item  Significand of $ 4_{10} = \texttt{[1]000.0000.0000.0000.0000}_{2}$
+           \item  $\texttt{S}_{16_{10}} + \texttt{S}_{4_{10}} = \texttt{[1]000.0000.0000.0000.0000}_{2} + \texttt{[1]000.0000.0000.0000.0000}_{2} = \texttt{1.0000.0000.0000.0000.0000}_{2}$ $
+         \end{enumerate}
+\end{enumerate}
+

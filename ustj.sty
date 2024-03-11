@@ -16,6 +16,14 @@
 % Set the monospace font for math mode
 %\usepackage{mathspec}
 \setmathtt[Scale=MatchLowercase]{Urbit Sans Mono TT SemiBold}
+% Define a new font family for small caps with FakeSlant
+\newfontfamily\slantedsmallcapsfont{Linux Libertine O}[
+    FakeSlant = 0.1 % Adjust the slant amount as needed
+]
+% Redefine \textsc to make small caps 25% larger
+% \let\oldtextsc\textsc
+% \renewcommand{\textsc}[1]{\scalebox{1.25}{\oldtextsc{#1}}}
+\newcommand{\ssc}[1]{{\slantedsmallcapsfont\textsc{#1}}}
 
 \usepackage{listings}
 \usepackage[dvipsnames]{xcolor}
@@ -93,11 +101,39 @@
     commentstyle=\color{Gray}\emph,
     keywordstyle=\color{darkgray}\bfseries
 }
+\lstdefinestyle{listingblock_python}{
+    language=Python,
+    basicstyle=\setmonofont\small,
+    numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
 \lstdefinestyle{listingcode_python}{
     language=Python,
     basicstyle=\setmonofont\small,
     numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
     frame=tb,
+    tabsize=2,
+    columns=fixed,
+    showstringspaces=false,
+    showtabs=false,
+    showspaces=false,
+    keepspaces,
+    upquote=true,
+    commentstyle=\color{Gray}\emph,
+    keywordstyle=\color{darkgray}\bfseries
+}
+\lstdefinestyle{listingblock_c}{
+    language=C,
+    basicstyle=\setmonofont\small,
+    numbers=left, numberstyle=\tiny, stepnumber=5, firstnumber=1, numberfirstline=false,
     tabsize=2,
     columns=fixed,
     showstringspaces=false,
@@ -160,6 +196,7 @@
     eprint=false
 ]{biblatex}
 \usepackage[hidelinks,breaklinks=true]{hyperref}
+\renewcommand{\UrlBreaks}{\do\/\do-}
 
 % Patch the \bibsetup command to set the bibliography to be ragged-right
 \usepackage{etoolbox}
@@ -199,6 +236,15 @@
   }%
 }
 
+% Define a command to enclose the title in quotation marks
+\newcommand{\quotetitle}[1]{``#1''}
+
+% Use the command to enclose the title for @online and @software entries
+\DeclareFieldFormat[online]{title}{\quotetitle{#1}}
+\DeclareFieldFormat[software]{title}{\quotetitle{#1}}
+\DeclareFieldFormat[techreport]{techreport}{\quotetitle{#1}}
+\DeclareFieldFormat[online]{titleaddon}{#1} % Adjust the formatting of titleaddon
+
 % Define a custom citation command for GitHub PRs
 \DeclareCiteCommand{\citetpr}
   {\usebibmacro{prenote}}
@@ -226,14 +272,13 @@
    \printfield{titleaddon}%
    \setunit{\addperiod\space\textsc{url}\addcolon\space}%
    \texttt{\url{\thefield{url}}}%
-   \setunit{\addspace(visited on\space}%
+   \setunit{\addspace(retrieved\space}%
    \printdate% Print the access date
    \setunit{\addcomma\space}\bibstring{urlseen}\addperiod\space}%
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
 % Use the custom citation command for @online entries
-\DeclareFieldFormat[online]{titleaddon}{#1} % Adjust the formatting of titleaddon
 \DeclareBibliographyDriver{online}{%
   \usebibmacro{bibindex}%
   \usebibmacro{begentry}%
@@ -267,12 +312,18 @@
     {}%
   \usebibmacro{finentry}}
 
-% Define a command to enclose the title in quotation marks
-\newcommand{\quotetitle}[1]{``#1''}
-
-% Use the command to enclose the title for @online and @software entries
-\DeclareFieldFormat[online]{title}{\quotetitle{#1}}
-\DeclareFieldFormat[software]{title}{\quotetitle{#1}}
+% Redefine the bibliography driver for @techreport entries
+\DeclareBibliographyDriver{techreport}{%
+    \usebibmacro{bibindex}%
+    \usebibmacro{begentry}%
+    \usebibmacro{author/editor}%
+    \setunit{\addspace}%
+    \printfield{title}%
+    \newunit\newblock
+    \usebibmacro{url+urldate}%
+    \newunit\newblock
+    \usebibmacro{finentry}%
+}
 
 \newcommand{\tombstone}{\resizebox{!}{\heightof{T}}{\includegraphics{ustj-logo}}}
 

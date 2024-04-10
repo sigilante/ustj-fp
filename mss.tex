@@ -9,7 +9,8 @@
 \fancyhf{}% Clear header/footer
 \fancyhead{}
 \fancyfoot[L]{{\footnotesize
-              Manuscript submitted for review.\\
+              % Manuscript submitted for review.\\
+              {\it Urbit Systems Technical Journal} I:1 (2024):  93–131. \\
               ~ \\
               Address author correspondence to \patp{lagrev-nocfep}.
               }}
@@ -35,6 +36,9 @@
 Floating-point calculations are critical to a number of special domains in modern computing, including machine learning, graphics, and scientific computing.  Numerical calculations are particularly susceptible to opaque and system-local optimizations, which can break certain guarantees for deterministic computers.  We consider the background and implementation of {\sc ieee} 754 floating-point arithmetic and options for implementing mathematics compatibly with fully reproducible and portable computing.  We consider hardware-based and software-based proposals.
 \end{abstract}
 
+\pagenumbering{arabic}
+\setcounter{page}{93}
+
 \tableofcontents
 
 \section{Introduction}
@@ -45,6 +49,7 @@ Floating-point operations are a technically complex subject and the extent to wh
 
 Modern digital computers deal, at their root, in binary representation, entirely zeros and ones.\footnote{Analog computers may operate on a continuum of value.  Computer logic systems may be architected on other numeric bases for their logic, such as the 1837 Analytical Engine's decimal system and the 1958 Setun's (Сетунь) ternary system.}  These are often formally considered to be whole numbers in a number base of two.  However, numerical calculations very frequently require the use of numbers with a fractional part to adequately represent the elements of a computation.
 
+\sloppy
 Early numeric computing tended to focus on problems of interest to military and national security applications, such as the solution of differential equations and numerical optimization.  Such calculations typically involve arrays, and linear algebra was elaborated hand-in-hand with digital computing techniques in software and hardware.  Numerics assumed prominence for a wider audience with the rise of gaming on personal computers, although these algorithms emphasized speed over exactness.\footnote{This is reflected in algorithms such as the “fast inverse square root”, which permits a degree of inaccuracy in exchange for a substantial speedup.}  To this point in the history of computing, most software either ran on a single platform for its lifetime (as with supercomputing) or did not require portably deterministic algorithms (as with gaming).\footnote{To be clear, 3D gaming algorithms are deterministic (assuming no random sources are used), but exact error values are often not reproducible across platforms, nor was such portability a design criterion.  The reasons for this are discussed below.}
 
 On the other hand, deterministic computing describes the ability for a given computation be reproducible exactly.  Such reproducibility permits referential transparency and more powerful reasoning about a program's results and dependencies.  This includes, for Urbit as a state machine, that the event log replay be portable across platforms to yield the same result.  Conceptual guarantees must be backstopped by actual implementation guarantees for determinism to hold.
@@ -54,21 +59,21 @@ On the other hand, deterministic computing describes the ability for a given com
 \sloppy
 Binary computer values are at root easily represented as non-negative integers.  However, it is frequently convenient when working with human applications to either use other numeric bases (notably decimal and hexadecimal) or to permit non-integer mathematics.
 
-In the historical development of mathematics, logical problems in each set of numbers drove the discovery and elaboration of more elaborate algebras.  For instance, in the field of natural numbers $\mathbb{N}$, the operation of addition $+$ or multiplication $\times$ produces a value within the set; however, permitting subtraction $-$ of a larger number from a smaller number can result in a value inexpressible in $\mathbb{N}$.  This motivated the introduction of the integers $\mathbb{Z}$, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division $/$ similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean\footnote{A legendary attribution, alas, predicated on the Pythagorean discovery of the irrational numbers as a separate class thereby inducing a crisis.  https://plato.stanford.edu/entries/pythagoras/} innovation of the rational numbers or fractions as a class $\mathbb{Q}$.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the set of real numbers.  The set of real numbers, denoted by $\mathbb{R}$, is characterized by its continuity, implying that for any two distinct values within this set, there exists a difference, no matter how small.
+In the historical development of mathematics, logical problems in each set of numbers drove the discovery and elaboration of more elaborate algebras.  For instance, in the field of natural numbers $\mathbb{N}$, the operation of addition $+$ or multiplication $\times$ produces a value within the set; however, permitting subtraction $-$ of a larger number from a smaller number can result in a value inexpressible in $\mathbb{N}$.  This motivated the introduction of the integers $\mathbb{Z}$, augmenting the numbers from zero to (positive) infinity with the negative numbers.  Division $/$ similarly produced a crisis when applied to values which did not have a whole-number ratio between them, a situation resolved by the Pythagorean\footnote{A legendary attribution, alas, predicated on the Pythagorean discovery of the irrational numbers as a separate class thereby inducing a crisis \citep{SEPPythagoras}.} innovation of the rational numbers or fractions as a class $\mathbb{Q}$.  Ultimately, the common reference set for engineering mathematics (and the human understanding of the continuum such as measurement) is the set of real numbers.  The set of real numbers, denoted by $\mathbb{R}$, is characterized by its continuity, implying that for any two distinct values within this set, there exists a difference, no matter how small.
 
 \sloppy
-Since the operations and conventions of $\mathbb{R}$ have been found to be so useful, it is desirable to extend the semantics to computer programming.  However, digital computers, by virtue of their binary representation, effectively use natural numbers $\mathbb{N}$ to represent numbers (to the limit of memory rather than positive infinity $+\infty$).  Several schemes permit a computer integer to be interpreted as if it were a number with a fractional part, including a scaling factor, fixed-point representation,\footnote{Hand-in-hand with the development of linear algebra, machines such as {\sc eniac} and {\sc maniac} were employed in the 1940s for solving thermonuclear reaction calculations and neutron diffusion equations.  Under the direction of John von Neumann, it appears that some calculations did experimentally involve a floating-point scheme, although this was later rejected definitively in favor of fixed-point arithmetic.  See \citet{Kahan1997a}, p.~3 on floating-point representations.}
+Since the operations and conventions of $\mathbb{R}$ have been found to be so useful, it is desirable to extend the semantics to computer programming.  However, digital computers, by virtue of their binary representation, effectively use natural numbers $\mathbb{N}$ to represent numbers (to the limit of memory rather than positive infinity $+\infty$).  Several schemes permit a computer integer to be interpreted as if it were a number with a fractional part, including a scaling factor, fixed-point representation,\footnote{Hand-in-hand with the development of linear algebra, machines such as {\sc eniac} and {\sc maniac} were employed in the 1940s for solving thermonuclear reaction calculations and neutron diffusion equations.  Under the direction of John von Neumann, it appears that some calculations did experimentally involve a floating-point scheme, although this was later rejected definitively in favor of fixed-point arithmetic.  See \citet{Kahan1997a}, p.~3, on floating-point representations.}
 
 The basic concept of floating point arithmetic is that it permits the representation of a discrete subset of $\mathbb{R}$ by composing a significand, a base, and an exponent.  The significand is the set of significant digits, possibly including the sign; the base is the understood number base (typically 2); and the exponent is the power to which that base is put before multiplying by the significand to yield the result.\footnote{Compare so-called “engineering” notation, such as \texttt{1e5} for 10,000, which compactly represents the significand 1 and the exponent 5 with an understood base of 10 indicated by \texttt{e} and a sign, implicit for positive.}  The most ubiquitous floating-point format in use today is defined by the {\sc ieee} 754 standard, but certain hardware platforms such as {\sc gpu}s utilize alternative floating-point arithmetic representations.\footnote{We cite \texttt{bfloat16} \citep{Wang2019} and TensorFloat-32 \citep{Kharva2020}, among others.}
 
 To summarize, given an abstract description of a floating point system, there are several practical implementations that can be derived.  We need to specify at least four quantities:  sign,\footnote{We could omit the sign by introducing an offset or only allowing positive values.} significand, base, and exponent.\footnote{The exponent has a bias so that it in turn does not need a sign.}  The base is presumably fixed by the protocol, leaving three free values for the implementation to economically encode.
 
 
-\subsection{{\sc ieee} 754 Basics}
+\subsection[\textsc{ieee} 754 Basics]{IEEE 754 Basics}
 
 Early computer systems with floating-point units chose bespoke but incompatible representations, ultimately leading to the {\sc ieee} 754 (primarily architected by William Kahan).  {\sc ieee} 754 reconciled considerations from many floating-point implementations across hardware manufacturers into an internally consistent set of fixed-width representations.\footnote{We ignore the decimal representations introduced in {\sc ieee} 754-2008, which do not materially change our argument.}  For instance, the 32-bit “single precision” C \texttt{float}/Fortran \texttt{REAL*4} specification denotes particular bit positions as meaningful,
 
-\begin{lstlisting}[style=listingblock]
+\begin{lstlisting}[style=listingcode]
 SEEE.EEEE.EFFF.FFFF.FFFF.FFFF.FFFF.FFFF
 \end{lstlisting}
 \noindent
@@ -81,7 +86,7 @@ $$
 {\sc ieee} 754 specifies operations between numbers, including of different magnitudes.  The standard dictates behavior and provides outlines for arithmetic, but leaves algorithmic details to the implementation.  Numbers are normalized by adjusting the exponent of the smaller operand and aligning the significands, then the operations are carried out.  In practice, extended precision values are used in the intermediate steps of many algorithms, leading to greater accuracy than would otherwise be expected.\footnote{“Each of the computational operations that return a numeric result specified by this standard shall be performed as if it first produced an intermediate result correct to infinite precision and with unbounded range, and then rounded that intermediate result, if necessary, to fit in the destination’s format.”  \citep{IEEE754-2008}  Note that, per \citeauthor{Risse2016}, “there is no indication whether or not a computation with {\sc ieee} 754 is exact even if all arguments are.”  The {\sc iso}/{\sc iec}9899 C standard confesses its own fallibility:  “The floating-point model is intended to clarify the description of each floating-point characteristic and does not require the floating-point arithmetic of the implementation to be identical” \citetext{\citet{ISO9899}, fn.~21}.}
 % https://www.iso.org/obp/ui/#iso:std:iso-iec:9899:ed-4:v1:en
 
-Since the {\sc ieee} 754 floating-point format packs values of different kind together bitwise, conventional integer operations such as left shift \texttt{<<} and addition \texttt{+} do not trivially apply.\footnote{For instance, left-shifting \texttt{1.0} does not result in \texttt{2.0} but \texttt{1.7014118e38}; we leave the mathematics of why as an exercise to the reader.}
+Since the {\sc ieee} 754 floating-point format packs values of different kind together bitwise, conventional integer operations such as left shift $<<$ and addition $+$ do not trivially apply.\footnote{For instance, left-shifting \texttt{1.0} does not result in \texttt{2.0} but \texttt{1.7014118e38}; we leave the mathematics of why as an exercise to the reader.}
 
 Floating-point addition (\texttt{add}) proceeds per the following algorithm:
 
@@ -106,7 +111,7 @@ Floating-point addition (\texttt{add}) proceeds per the following algorithm:
 
 For most values of the exponent \texttt{E}, the difference between two discrete values is determined by the absolute magnitude of the significand \texttt{S}.  The difference between serial values is
 \begin{align}
-  \Delta\texttt{S} &= \texttt{000.0000.0000.0000.0000.0001}_{2} \nonumber \\
+  \Delta\texttt{S} &= \texttt{␣000.0000.0000.0000.0000.0001}_{2} \nonumber \\
   & = 1.00000011920928955078125 - 1.0 \nonumber \\
   & = 0.00000011920928955078125 \nonumber \\
   & = 2^{-23}\textrm{.}
@@ -135,7 +140,7 @@ The machine epsilon, or smallest value discernable from 1.0, is determined by th
 In situations in which floating-point operations may occur in different orders, even the basic guarantee of communitativity breaks.  For instance, in 64-bit floating point arithmetic, the following holds true (example in Python):
 
 \lstset{language=Python}
-\begin{lstlisting}[style=listingblock_python]
+\begin{lstlisting}[style=listingcode_python]
 In [1]: (1.1-0.3)-0.8
 Out[1]: 0.0
 
@@ -181,7 +186,7 @@ Whether something is a gap or optional is something of a philosophical question 
 
 Failure to implement {\sc ieee} 754 correctly may happen inadvertently, as with the Pentium {\sc fdiv} bug in the 1990s \citep{Edelman1997}.  Alternatively, chipset designers may deviate from the specification for reasons of performance or limitations in the architecture.
 
-For instance, {\sc ieee} 754 defines a range of numbers as “not-a-number” values, or NaNs.  Per the specification, a NaN can be a signalling NaN, meaning that it intends to flag and possibly disrupt a problematic computation;\footnote{“C support for signaling NaNs, or for auxiliary information that could be encoded in NaNs, is problematic.  Trap handling varies widely among implementations. Implementation mechanisms may trigger signaling NaNs, or fail to, in mysterious ways.  The {\sc iec} 60559 floating-point standard recommends that NaNs propagate; but it does not require this and not all implementations do.”  \citetext{\citet{Jones2008}, p.~339}} or a quiet NaN, which does not raise such an exception and merely yields a result with the NaN propagated to the final result.\footnote{In Urbit, the Vere runtime unifies NaNs, meaning that any bitwise information which may be encoded in the significand field—the “NaN payload”—is thrown away.}  Not all processors implement this part of {\sc ieee} 754 correctly:  “The Motorola {\sc dsp563ccc} does not support NaNs or infinities.  Floating-point arithmetic operations do not overflow to infinity; they saturate at the maximum representable value” \citetext{\citet{Jones2008}, p.~338}.
+For instance, {\sc ieee} 754 defines a range of numbers as “not-a-number” values, or NaNs.  Per the specification, a NaN can be a signalling NaN, meaning that it intends to flag and possibly disrupt a problematic computation;\footnote{“C support for signaling NaNs, or for auxiliary information that could be encoded in NaNs, is problematic.  Trap handling varies widely among implementations. Implementation mechanisms may trigger signaling NaNs, or fail to, in mysterious ways.  The {\sc iec} 60559 floating-point standard recommends that NaNs propagate; but it does not require this and not all implementations do.”  \citetext{\citet{Jones2008}, p.~339}} or a quiet NaN, which does not raise such an exception and merely yields a result with the NaN propagated to the final result.\footnote{In Urbit, the Vere runtime unifies NaNs, meaning that any bitwise information which may be encoded in the significand field—the “NaN payload”—is thrown away.  This is called the ``canonical NaN''.}  Not all processors implement this part of {\sc ieee} 754 correctly:  “The Motorola {\sc dsp563ccc} does not support NaNs or infinities.  Floating-point arithmetic operations do not overflow to infinity; they saturate at the maximum representable value” \citetext{\citet{Jones2008}, p.~338}.
 
 As a further example, fused multiply-add ({\sc fma}) ($a \times b + c$) is implemented on certain hardware to favor \texttt{double} operations and not quadruple-precision operations \citetext{\citet{Kahan1997}, p.~5}.
 %\footnote{While this particular example may not strike the reader as particularly egregious, the existence of deviations from the specification raises the spectre of nondeterminism.}
@@ -210,7 +215,7 @@ The rounding mode can affect the result of computations, and if other processes 
 “Obtaining the correctly rounded result of an addition or subtraction operation requires an additional bit in the significand (as provided by the {\sc iec} 60559 guard bit) to hold the intermediate result” \citetext{\citet{Jones2008}, p.~65}.
 
 
-\section{Urbit's Implementation of {\sc ieee} 754}
+\section{Urbit's Implementation of \textsc{\textbf{ieee}} 754}
 
 Urbit implements a subset of {\sc ieee} 754 functionality in \lstinline[style=inlinecode]{/sys/hoon}, the Hoon language specification.  The Nock operations formally take place on integers.  In practice, we could imagine several ways of implementing such operations:  bitmasking the integers or breaking them apart into three components, for instance.  We take Urbit's implementation of \lstinline[style=inlinecode]{@rs} (single-precision \texttt{float}) as representative.\footnote{The only significant variation in the other real types in Hoon arises for quadruple-precision floating-point values \lstinline[style=inlinecode]{@rq} which are represented in the runtime by a pair of \texttt{uint64\_t}s.}
 
@@ -219,7 +224,7 @@ Urbit implements a subset of {\sc ieee} 754 functionality in \lstinline[style=in
 The \lstinline[style=inlinecode]{++fn} core offers a generalized interface for a superset of {\sc ieee} 754-style floating-point implementations, permitting bit width, precision, bias, and rounding mode to be freely specified.\footnote{In practice, of course, Urbit hews to recognized types, but the temptation to design new floating-point layouts is intriguing.}  The actual implementation on \lstinline[style=inlinecode]{+$fn}-typed values is rather dense and features numerous rounding and overflow checks:
 
 %\lstset{language=Hoon}
-\begin{lstlisting}[style=listingblock]
+\begin{lstlisting}[style=listingcode]
 ++  add
   |=  [a=[e=@s a=@u] b=[e=@s a=@u] e=?]  ^-  fn
   =+  q=(dif:si e.a e.b)
@@ -242,7 +247,7 @@ The \lstinline[style=inlinecode]{++fn} core offers a generalized interface for a
 There is, of course, a feint in the foregoing discussion.  Nock is a virtual machine specification, and in practice operations that would benefit from more direct expression in C are \emph{jetted}.\footnote{A shorthand for \emph{jet-accelerated code}.}  Thus the actual call in this case will correspond to some C code using the SoftFloat library:\footnote{\texttt{u3} functions are Urbit noun library functions.  The \texttt{sing} union is a union of \texttt{uint32\_t} and SoftFloat \texttt{float32\_t} types.}
 
 \lstset{language=C}
-\begin{lstlisting}[style=listingblock_c]
+\begin{lstlisting}[style=listingcode_c]
 u3_noun u3qet_add(u3_atom a, u3_atom b, u3_atom r) {
   union sing c, d, e;
   // set IEEE 754 rounding mode
@@ -261,7 +266,7 @@ u3_noun u3qet_add(u3_atom a, u3_atom b, u3_atom r) {
 Why SoftFloat?  Enter, stage left, the problem of platform-portable determinism.
 
 
-\section{Deterministic Computation with a Fractional Part}
+\section[Deterministic\,Computation\,with\,Fractional\,Part]{Deterministic Computation with a \\ Fractional Part}
 
 Non-real arithmetic is less significant for many of the core operations of Urbit as a personal server platform.  However, gaming, machine learning, graphics, and other applications rely on floating-point calculations—preferably as fast as possible.  In fact, not only applications-oriented processes rely on determinism:  guarantees in cryptography and contractual correctness for web3; verification and validation; accounting and legal compliance; and code correctness analysis all require reproducible determinism.\footnote{Support for {\sc ieee} 754 is similar for support for the Markdown markup language.  Many platforms support a subset of Markdown coupled with platform-specific extensions.  (See also SQL.)  Internal references, HTML, inline \LaTeX~math mode, code block language specification, and other features see varying levels of support with GitHub, Pandoc, Obsidian, and other editors and converters.}
 
@@ -288,7 +293,7 @@ However, in another example due to \citeauthor{Dawson2013}, {\sc fma} yields inc
 
 The situation grows more ambiguous across architectures.  \citetext{\citet{Jones2008}, p.~346,} presents the pathological case of a compliant platform that may use extended precision bits in the calculation of \texttt{a + b}:
 
-\begin{lstlisting}[style=listingblock_c]
+\begin{lstlisting}[style=listingcode_c]
 #include <stdio.h>
 
 extern double a, b;
@@ -455,11 +460,11 @@ Finally, we face the possibility of jettisoning decades of floating-point librar
 
 \subparagraph{Posits.}
 
-In 2015, John Gustafson proposed a new standard for representing values drawn from $\mathbb{R}$ called universal numbers or unums \citep{Gustafson2015}.\footnote{See also \citet{Gustafson2017}, \citet{Gustafson2017a}, and \citet{Gustafson2017b}.}  The current version of unums, called posits, supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
+In 2015, John Gustafson proposed a new standard for representing values drawn from $\mathbb{R}$ called universal numbers or unums \citep{Gustafson2015}.\footnote{See also \citet{Gustafson2017}, \citet{Gustafson2017a}, and \citet{Gustafson2017b}.}  The current version supports interval arithmetic and greater resolution near 1.0, at the cost of decreased resolution for extremely large and extremely small values.  Unums also guarantee associativity and distributivity of operations.
 
-Gustafson's criticisms of {\sc ieee} 754 focused on determinism and exactness; underflow and overflow; fixed bit widths for mantissa and exponent; rounding; and the large wasted block of NaNs \citep{Risse2016}.  Unums likewise must provide sign, exponent with bias, and significand; they additionally signal whether the value is an interval.  Unlike {\sc ieee} 754's use of multiple bit widths, 32-bit posits are argued to be sufficient for almost all applications.
+Gustafson's criticisms of {\sc ieee} 754 focused on determinism and exactness; underflow and overflow; fixed bit widths for mantissa and exponent; rounding; and the large wasted block of NaNs \citep{Risse2016}.  Unums likewise must provide sign, exponent with bias, and significand; they may additionally signal whether the value is an interval.  Unlike {\sc ieee} 754's use of multiple bit widths, 32-bit ``posits'' (fixed-size unums intended to facilitate hardware requirements) are argued to be sufficient for almost all applications.
 
-The unum proposal appears to have settled somewhat after its initial state of relative flux (as ``posits'' or Type III unums, cf. \citet{Posit2022}).  Although most implementations have been in software, the project has been specified in Verilog several times and implemented on {\sc fpga}s (VividSparks, \url{https://vividsparks.tech/}, and \citet{Chen2018}).  Intriguingly, some initial work has been carried out towards a fundamental {\sc blas}-like library built on posits \citep{vanDam2019}.
+The unum proposal appears to have settled somewhat after its initial state of relative flux (as Type III unums, cf. \citet{Posit2022}).  Although most implementations have been in software, the project has been specified in Verilog several times and implemented on {\sc fpga}s (VividSparks, \url{https://vividsparks.tech/}, and \citet{Chen2018}).  Intriguingly, some initial work has been carried out towards a fundamental {\sc blas}-like library built on posits \citep{vanDam2019}.
 
 A unum/posit implementation for Urbit would be as straightforward as its implementation of {\sc ieee} 754.  For jetting, there is a software library for posits available called SoftPosit based on the SoftFloat library \citep{Cerlane2018}.  (Until commercial hardware implementations become available, the effect of optimizations on determinism cannot yet be assessed; it is presumed that the situation will be better than {\sc ieee} 754 given the advantages of a clean slate.)
 
@@ -519,8 +524,8 @@ To summarize, the most promising solutions for floating-point mathematics on Urb
   \item  Replacing {\sc ieee} 754 with another approach of sufficient speed, fixed-point and unum/posits chief among these.
 \end{enumerate}
 
-Several recent efforts on Urbit have encountered difficulties in producing reliably deterministic and sufficiently fast floating-point calculations on a Nock-based system.\footnote{Cf. UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UrWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved, and in particular \citet{Afonin2024} in the current text), \href{https://github.com/Quodss/urwasm}{\texttt{Quodss/urwasm}}; \texttt{/lib/math}, implemented purely in Hoon, \href{https://github.com/sigilante/libmath}{\texttt{sigilante/libmath}}; and Lagoon, which includes {\sc ieee} 754 operations with its linear algebra library, \href{https://github.com/urbit/numerics}{\texttt{urbit/numerics}} pending development and integration into Urbit.}  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics. \tombstone{}
+Several recent efforts on Urbit have encountered difficulties in producing reliably deterministic and sufficiently fast floating-point calculations on a Nock-based system.\footnote{Cf. UrWasm, which as a WebAssembly implementation directly relies on floating-point computations \citep{UrWasm} (see e.g. \citet{KloudKoder2022} for a discussion of the issues involved, and in particular \citeauthor{Afonin2024}, pp. 133–150 in this issue), \href{https://github.com/Quodss/urwasm}{\texttt{Quodss/urwasm}}; \texttt{/lib/math}, implemented purely in Hoon, \href{https://github.com/sigilante/libmath}{\texttt{sigilante/libmath}}; and Lagoon, which includes {\sc ieee} 754 operations with its linear algebra library, \href{https://github.com/urbit/numerics}{\texttt{urbit/numerics}} pending development and integration into Urbit.}  We anticipate that, water finding its own level, each will adopt a suitable deterministic solution for evaluation in Nock.  We do not anticipate these to be the last foundational numerical libraries built on Urbit, but instead among the first.  Thus we have documented the paths we have explored as an annotated map for future travelers in search of a one true representation for continuous mathematics. \tombstone{}
 
-% \selectlanguage{USenglish}
+\selectlanguage{USenglish}
 \printbibliography
 \end{document}

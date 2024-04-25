@@ -68,7 +68,7 @@
     breaklines=true,
     breakatwhitespace=true,
     commentstyle=\color{Gray}\emph,
-    keywordstyle=\color{darkgray}\bfseries
+    keywordstyle=\bfseries
 }
 \lstdefinestyle{listingcode}{
     language=Hoon,
@@ -82,8 +82,8 @@
     showspaces=false,
     keepspaces,
     upquote=true,
-    commentstyle=\color{Gray}\emph,
-    keywordstyle=\color{darkgray}\bfseries
+    commentstyle=\color{darkgray}\emph,
+    keywordstyle=\bfseries
 }
 \lstdefinestyle{listingblock}{
     language=Hoon,
@@ -96,7 +96,7 @@
     showspaces=false,
     keepspaces,
     upquote=true,
-    commentstyle=\color{Gray}\emph,
+    commentstyle=\color{darkgray}\emph,
     keywordstyle=\color{darkgray}\bfseries
 }
 \lstdefinestyle{listingcode_python}{
@@ -111,7 +111,7 @@
     showspaces=false,
     keepspaces,
     upquote=true,
-    commentstyle=\color{Gray}\emph,
+    commentstyle=\color{darkgray}\emph,
     keywordstyle=\color{darkgray}\bfseries
 }
 \lstdefinestyle{listingcode_c}{
@@ -126,7 +126,7 @@
     showspaces=false,
     keepspaces,
     upquote=true,
-    commentstyle=\color{Gray}\emph,
+    commentstyle=\color{darkgray}\emph,
     keywordstyle=\color{darkgray}\bfseries
 }
 
@@ -169,7 +169,8 @@
     eprint=false
 ]{biblatex}
 \usepackage[hidelinks,breaklinks=true]{hyperref}
-\renewcommand{\UrlBreaks}{\do\/\do-}
+\renewcommand\UrlFont{\monofont}
+\renewcommand{\UrlBreaks}{\do\/\do-\do:}
 
 % Patch the \bibsetup command to set the bibliography to be ragged-right
 \usepackage{etoolbox}
@@ -263,6 +264,8 @@
   \usebibmacro{title}%
   \newunit\newblock
   \printfield{titleaddon}% Print titleaddon
+  \newunit\newblock
+  \printfield{howpublished}% Print howpublished field here
   \newunit\newblock
   \usebibmacro{url+urldate}%
   \newunit\newblock
